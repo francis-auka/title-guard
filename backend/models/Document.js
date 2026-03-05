@@ -52,6 +52,23 @@ const documentSchema = new mongoose.Schema(
             enum: ["registered", "pending", "failed"],
             default: "registered",
         },
+        // Ownership Metadata (for fraud detection)
+        ownerName: {
+            type: String,
+            required: [true, "Owner name is required"],
+            trim: true,
+            uppercase: true,
+        },
+        county: {
+            type: String,
+            required: [true, "County is required"],
+            trim: true,
+            uppercase: true,
+        },
+        area: {
+            type: Number, // in hectares or acres
+            required: [true, "Land area is required"],
+        },
         notes: {
             type: String,
             maxlength: 500,
@@ -63,7 +80,10 @@ const documentSchema = new mongoose.Schema(
     }
 );
 
-// Text index for search
-documentSchema.index({ parcelNumber: "text", fileName: "text" });
+// Indexes
+documentSchema.index({ documentHash: 1 });
+documentSchema.index({ parcelNumber: 1 });
+documentSchema.index({ ownerName: 1, county: 1, area: 1 }); // For metadata conflict check
+documentSchema.index({ parcelNumber: "text", fileName: "text", ownerName: "text" });
 
 module.exports = mongoose.model("Document", documentSchema);

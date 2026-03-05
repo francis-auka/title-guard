@@ -50,16 +50,26 @@ router.post(
                 });
             }
 
-            const { parcelNumber, notes } = req.body;
+            const { parcelNumber, ownerName, county, area, notes } = req.body;
 
-            if (!parcelNumber || parcelNumber.trim() === "") {
+            if (!parcelNumber || !ownerName || !county || !area) {
                 return res.status(400).json({
                     success: false,
-                    message: "Parcel number is required.",
+                    message: "Parcel number, owner name, county, and land area are required.",
                 });
             }
 
             const normalizedParcel = parcelNumber.trim().toUpperCase();
+            const normalizedOwner = ownerName.trim().toUpperCase();
+            const normalizedCounty = county.trim().toUpperCase();
+            const numericArea = parseFloat(area);
+
+            if (isNaN(numericArea)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Land area must be a valid number.",
+                });
+            }
 
             // Compute SHA-256 hash of the file buffer
             const documentHash = crypto
@@ -67,7 +77,7 @@ router.post(
                 .update(req.file.buffer)
                 .digest("hex");
 
-            // Check for duplicate hash (same document content)
+            // 1. Check for duplicate hash (same document content)
             const existingByHash = await Document.findOne({ documentHash });
             if (existingByHash) {
                 return res.status(409).json({
@@ -80,7 +90,7 @@ router.post(
                 });
             }
 
-            // Check for duplicate parcel number
+            // 2. Check for duplicate parcel number (same LOC, different document)
             const existingByParcel = await Document.findOne({
                 parcelNumber: normalizedParcel,
             });
@@ -93,6 +103,26 @@ router.post(
                 });
             }
 
+            // 3. Metadata Conflict Check (Fraud Scenario 3)
+            // Same owner + county + area, but DIFFERENT parcel number
+            const metadataConflict = await Document.findOne({
+                ownerName: normalizedOwner,
+                county: normalizedCounty,
+                area: numericArea,
+                parcelNumber: { $ne: normalizedParcel },
+            });
+
+            if (metadataConflict) {
+                return res.status(409).json({
+                    success: false,
+                    message:
+                        "Warning: A document with identical ownership metadata (Owner, County, Area) already exists under a different parcel number.",
+                    conflictType: "METADATA_CONFLICT",
+                    conflictingParcel: metadataConflict.parcelNumber,
+                    existingVerificationId: metadataConflict.verificationId,
+                });
+            }
+
             // Create verification UUID
             const verificationId = uuidv4();
 
@@ -100,6 +130,9 @@ router.post(
             const doc = await Document.create({
                 owner: req.user._id,
                 parcelNumber: normalizedParcel,
+                ownerName: normalizedOwner,
+                county: normalizedCounty,
+                area: numericArea,
                 documentHash,
                 verificationId,
                 fileName: req.file.originalname,

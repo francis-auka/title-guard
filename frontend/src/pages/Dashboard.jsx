@@ -34,8 +34,10 @@ function DocumentRow({ doc }) {
                     {/* Parcel + file */}
                     <div className="flex items-center gap-2 flex-wrap mb-2">
                         <span className="badge-info font-mono text-xs">{doc.parcelNumber}</span>
-                        <span className="text-slate-500 text-xs">{doc.fileName}</span>
-                        <span className="text-slate-600 text-xs">{formatBytes(doc.fileSize)}</span>
+                        <span className="text-slate-400 text-xs font-semibold uppercase">{doc.ownerName}</span>
+                        <span className="text-slate-500 text-xs italic">{doc.county}</span>
+                        <span className="text-slate-600 text-xs">{doc.area} Ha</span>
+                        <span className="text-slate-500 text-xs truncate max-w-[150px]">— {doc.fileName}</span>
                     </div>
 
                     {/* Verification ID */}

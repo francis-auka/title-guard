@@ -23,10 +23,10 @@ function FileDropZone({ file, onFileChange }) {
             onDrop={handleDrop}
             onClick={() => inputRef.current?.click()}
             className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 ${dragging
-                    ? "border-accent-500 bg-accent-500/10"
-                    : file
-                        ? "border-emerald-500/60 bg-emerald-500/5"
-                        : "border-slate-600 hover:border-slate-500 bg-slate-800/30 hover:bg-slate-800/50"
+                ? "border-accent-500 bg-accent-500/10"
+                : file
+                    ? "border-emerald-500/60 bg-emerald-500/5"
+                    : "border-slate-600 hover:border-slate-500 bg-slate-800/30 hover:bg-slate-800/50"
                 }`}
         >
             <input
@@ -68,13 +68,18 @@ function UploadDocument() {
     const navigate = useNavigate();
     const [file, setFile] = useState(null);
     const [parcelNumber, setParcelNumber] = useState("");
+    const [ownerName, setOwnerName] = useState("");
+    const [county, setCounty] = useState("");
+    const [area, setArea] = useState("");
     const [notes, setNotes] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [metadataConflict, setMetadataConflict] = useState(null);
     const [result, setResult] = useState(null);
 
     const handleFileChange = (f) => {
         setError("");
+        setMetadataConflict(null);
         if (!f) return;
         if (!ALLOWED_TYPES.includes(f.type)) {
             setError("Unsupported file type. Please upload a PDF, JPG, or PNG.");
@@ -90,15 +95,22 @@ function UploadDocument() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
+        setMetadataConflict(null);
 
         if (!file) { setError("Please select a document file."); return; }
         if (!parcelNumber.trim()) { setError("Parcel number is required."); return; }
+        if (!ownerName.trim()) { setError("Owner name is required."); return; }
+        if (!county.trim()) { setError("County is required."); return; }
+        if (!area.trim() || isNaN(area)) { setError("Valid land area is required."); return; }
 
         setLoading(true);
         try {
             const formData = new FormData();
             formData.append("document", file);
             formData.append("parcelNumber", parcelNumber.trim());
+            formData.append("ownerName", ownerName.trim());
+            formData.append("county", county.trim());
+            formData.append("area", area.trim());
             formData.append("notes", notes.trim());
 
             const { data } = await api.post("/documents/register", formData, {
@@ -109,7 +121,16 @@ function UploadDocument() {
                 setResult(data.data);
             }
         } catch (err) {
-            setError(err.response?.data?.message || "Registration failed. Please try again.");
+            const responseData = err.response?.data;
+            if (responseData?.conflictType === "METADATA_CONFLICT") {
+                setMetadataConflict({
+                    message: responseData.message,
+                    conflictingParcel: responseData.conflictingParcel,
+                    verificationId: responseData.existingVerificationId
+                });
+            } else {
+                setError(responseData?.message || "Registration failed. Please try again.");
+            }
         } finally {
             setLoading(false);
         }
@@ -153,7 +174,15 @@ function UploadDocument() {
 
                         <div className="flex flex-col sm:flex-row gap-3">
                             <button
-                                onClick={() => { setResult(null); setFile(null); setParcelNumber(""); setNotes(""); }}
+                                onClick={() => {
+                                    setResult(null);
+                                    setFile(null);
+                                    setParcelNumber("");
+                                    setOwnerName("");
+                                    setCounty("");
+                                    setArea("");
+                                    setNotes("");
+                                }}
                                 className="btn-outline flex-1"
                             >
                                 Register Another
@@ -196,11 +225,76 @@ function UploadDocument() {
                         </div>
                     )}
 
+                    {metadataConflict && (
+                        <div className="mb-6 px-5 py-4 rounded-xl bg-amber-500/10 border border-amber-500/40 text-amber-200 animate-slide-up">
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className="text-xl">🚨</span>
+                                <h4 className="font-bold text-sm uppercase tracking-wider">Potential Fraud Detected</h4>
+                            </div>
+                            <p className="text-sm leading-relaxed mb-3 opacity-90">
+                                {metadataConflict.message}
+                            </p>
+                            <div className="bg-amber-950/40 rounded-lg p-3 border border-amber-500/20 text-xs space-y-2">
+                                <div className="flex justify-between">
+                                    <span className="text-amber-500/70 uppercase">Conflicting Parcel</span>
+                                    <span className="font-mono text-amber-400">{metadataConflict.conflictingParcel}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-amber-500/70 uppercase">Verification ID</span>
+                                    <span className="font-mono text-amber-400">{metadataConflict.verificationId.slice(0, 18)}...</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {/* File upload */}
                         <div className="form-group">
                             <label className="label">Title Deed Document</label>
                             <FileDropZone file={file} onFileChange={handleFileChange} />
+                        </div>
+
+                        {/* Owner Details Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="form-group md:col-span-2">
+                                <label htmlFor="ownerName" className="label">Full Name of Owner</label>
+                                <input
+                                    id="ownerName"
+                                    type="text"
+                                    value={ownerName}
+                                    onChange={(e) => { setOwnerName(e.target.value); setError(""); setMetadataConflict(null); }}
+                                    placeholder="e.g. JOHN DOE MURAGE"
+                                    className="input uppercase"
+                                    required
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="county" className="label">County</label>
+                                <input
+                                    id="county"
+                                    type="text"
+                                    value={county}
+                                    onChange={(e) => { setCounty(e.target.value); setError(""); setMetadataConflict(null); }}
+                                    placeholder="e.g. NAIROBI"
+                                    className="input uppercase"
+                                    required
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="area" className="label">Area (approx. hectares)</label>
+                                <input
+                                    id="area"
+                                    type="number"
+                                    step="0.0001"
+                                    value={area}
+                                    onChange={(e) => { setArea(e.target.value); setError(""); setMetadataConflict(null); }}
+                                    placeholder="0.045"
+                                    className="input"
+                                    required
+                                />
+                            </div>
                         </div>
 
                         {/* Parcel number */}
@@ -213,7 +307,7 @@ function UploadDocument() {
                                 id="parcelNumber"
                                 type="text"
                                 value={parcelNumber}
-                                onChange={(e) => { setParcelNumber(e.target.value); setError(""); }}
+                                onChange={(e) => { setParcelNumber(e.target.value); setError(""); setMetadataConflict(null); }}
                                 placeholder="LOC/1234/567"
                                 className="input font-mono uppercase"
                                 required
