@@ -97,12 +97,4 @@ npx hardhat run scripts/deploy.js --network amoy
 
 Title Guard uses a **Zero-Storage Policy** for sensitive documents. When a user uploads a document for registration or verification, the file is processed entirely in the application's RAM. Only the resulting SHA-256 hash is compared or stored. Your property data remains your property.
 
----
 
-## ⚖️ License
-
-Distributed under the MIT License. See `LICENSE` for more information.
-
----
-
-**Built with ❤️ for a more transparent Kenyan land registry.**
