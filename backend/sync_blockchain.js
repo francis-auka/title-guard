@@ -11,7 +11,6 @@ async function syncAll() {
         await mongoose.connect(process.env.MONGO_URI);
         console.log('✅ Connected to MongoDB');
 
-        // Find all documents that are pending on-chain registration
         const docs = await Document.find({
             $or: [
                 { blockchainTxHash: { $exists: false } },
@@ -25,25 +24,20 @@ async function syncAll() {
         for (const doc of docs) {
             console.log(`\nSyncing parcel: ${doc.parcelNumber}`);
 
-            // Handle missing required fields for legacy documents
-            let modified = false;
-            if (!doc.ownerName) { doc.ownerName = "LEGACY OWNER"; modified = true; }
-            if (!doc.county) { doc.county = "UNKNOWN"; modified = true; }
-            if (!doc.area) { doc.area = 0; modified = true; }
+            if (!doc.ownerName) doc.ownerName = "LEGACY OWNER";
+            if (!doc.county) doc.county = "UNKNOWN";
+            if (!doc.area) doc.area = 0;
 
             const txHash = await registerDocumentOnChain(doc.documentHash, doc.parcelNumber);
 
             if (txHash) {
                 doc.blockchainTxHash = txHash;
                 doc.status = 'verified';
-                // Save with validation to ensure integrity, but we've filled the gaps
                 await doc.save();
                 console.log(`✅ Sync successful: ${txHash}`);
             } else {
                 console.error(`❌ Sync failed for parcel: ${doc.parcelNumber}`);
             }
-
-            // Add a small delay between transactions
             await new Promise(resolve => setTimeout(resolve, 2000));
         }
 
