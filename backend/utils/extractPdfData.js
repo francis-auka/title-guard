@@ -1,37 +1,38 @@
-const pdfParse = require('pdf-parse');
+const pdf = require('pdf-parse');
+const pdfParse = pdf.default || pdf;
 
-/**
- * Extracts property metadata from a Title Deed PDF buffer.
- */
 const extractPdfData = async (fileBuffer) => {
     try {
         const data = await pdfParse(fileBuffer);
         const text = data.text;
 
-        // DEBUG LOGGING for the developer (visible in backend console)
-        console.log("---------------- PDF EXTRACTION DEBUG ----------------");
-        console.log("RAW TEXT START >>");
-        console.log(text);
-        console.log("<< RAW TEXT END");
+        console.log('Extracted PDF text:', text);
 
-        // Dynamic extraction based on labels
-        // Captures everything after the colon until the end of the line
-        const parcelMatch = text.match(/Parcel\s*Number:\s*([^\r\n]+)/i);
-        const ownerMatch = text.match(/Full\s*Name:\s*([^\r\n]+)/i);
-        const countyMatch = text.match(/County:\s*([^\r\n]+)/i);
+        // Dynamically extract whatever parcel number follows "Parcel Number:"
+        const parcelMatch = text.match(/Parcel Number:\s*([A-Z0-9\/]+)/i);
+
+        // Dynamically extract whatever name follows "Full Name:"
+        const ownerMatch = text.match(/Full Name:\s*([A-Z\s]+?)(?:\n|ID)/i);
+
+        // Dynamically extract whatever county follows "County:"
+        const countyMatch = text.match(/^County:\s*(.+)$/im);
+
+        // Dynamically extract whatever hectare value appears
         const areaMatch = text.match(/([\d.]+)\s*Hectares/i);
 
-        const extracted = {
-            parcelNumber: parcelMatch ? parcelMatch[1].trim().toUpperCase() : null,
-            ownerName: ownerMatch ? ownerMatch[1].trim().toUpperCase() : null,
-            county: countyMatch ? countyMatch[1].trim().toUpperCase() : null,
+        console.log('Extracted fields:', {
+            parcelNumber: parcelMatch?.[1],
+            ownerName: ownerMatch?.[1],
+            county: countyMatch?.[1],
+            area: areaMatch?.[1],
+        });
+
+        return {
+            parcelNumber: parcelMatch ? parcelMatch[1].trim() : null,
+            ownerName: ownerMatch ? ownerMatch[1].trim() : null,
+            county: countyMatch ? countyMatch[1].trim() : null,
             area: areaMatch ? areaMatch[1].trim() : null,
         };
-
-        console.log("EXTRACTED OBJECT:", extracted);
-        console.log("------------------------------------------------------");
-
-        return extracted;
     } catch (error) {
         console.error('PDF extraction fatal error:', error);
         return { parcelNumber: null, ownerName: null, county: null, area: null };
