@@ -158,7 +158,7 @@ router.post(
             // Create verification UUID
             const verificationId = uuidv4();
 
-            // Save document record
+            // Save document record (Initial Save)
             const doc = await Document.create({
                 owner: req.user._id,
                 parcelNumber: normalizedParcel,
@@ -173,6 +173,19 @@ router.post(
                 notes: notes || "",
             });
 
+            // BLOCKCHAIN REGISTRATION
+            const { registerDocumentOnChain } = require("../blockchain/contract");
+            const blockchainTxHash = await registerDocumentOnChain(documentHash, normalizedParcel);
+
+            if (blockchainTxHash) {
+                doc.blockchainTxHash = blockchainTxHash;
+                doc.status = "verified"; // Update status on success
+                await doc.save();
+                console.log(`[Blockchain] Successful registration for ${normalizedParcel}: ${blockchainTxHash}`);
+            } else {
+                console.warn(`[Blockchain] Registration skipped or failed for ${normalizedParcel}.`);
+            }
+
             res.status(201).json({
                 success: true,
                 message: "Document registered successfully.",
@@ -184,6 +197,8 @@ router.post(
                     fileName: doc.fileName,
                     fileSize: doc.fileSize,
                     registeredAt: doc.createdAt,
+                    blockchainTxHash: doc.blockchainTxHash,
+                    status: doc.status,
                 },
             });
         } catch (err) {
