@@ -1,5 +1,5 @@
 const pdf = require('pdf-parse');
-const pdfParse = pdf.default || pdf;
+const pdfParse = pdf.PDFParse || pdf.default || pdf;
 
 const extractPdfData = async (fileBuffer) => {
     try {
