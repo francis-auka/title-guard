@@ -1,10 +1,10 @@
-const pdf = require('pdf-parse');
-const pdfParse = pdf.PDFParse || pdf.default || pdf;
+const { PDFParse } = require('pdf-parse');
 
 const extractPdfData = async (fileBuffer) => {
+    const parser = new PDFParse({ data: fileBuffer });
     try {
-        const data = await pdfParse(fileBuffer);
-        const text = data.text;
+        const result = await parser.getText();
+        const text = result.text;
 
         console.log('Extracted PDF text:', text);
 
@@ -36,6 +36,9 @@ const extractPdfData = async (fileBuffer) => {
     } catch (error) {
         console.error('PDF extraction fatal error:', error);
         return { parcelNumber: null, ownerName: null, county: null, area: null };
+    } finally {
+        // Always call destroy() to free memory
+        await parser.destroy();
     }
 };
 
