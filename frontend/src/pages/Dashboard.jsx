@@ -46,27 +46,56 @@ function DocumentRow({ doc }) {
                         <code className="text-xs text-accent-300 font-mono bg-slate-800 px-2 py-0.5 rounded truncate max-w-[200px] sm:max-w-none">
                             {doc.verificationId}
                         </code>
-                        <button
-                            onClick={copy}
-                            title="Copy verification ID"
-                            className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
-                        >
-                            {copied ? (
-                                <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                </svg>
-                            ) : (
-                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
-                            )}
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                            <button
+                                onClick={copy}
+                                title="Copy verification ID"
+                                className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                            >
+                                {copied ? (
+                                    <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                ) : (
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                )}
+                            </button>
+                            {copied && <span className="text-[10px] text-emerald-400 font-medium animate-pulse">Copied!</span>}
+                        </div>
                     </div>
 
-                    {/* Hash preview */}
-                    <p className="text-xs text-slate-600 font-mono mt-2 truncate">
-                        SHA-256: {doc.documentHash?.slice(0, 32)}…
-                    </p>
+                    {/* Registry Hash & Blockchain TX */}
+                    <div className="grid grid-cols-1 gap-3 mt-4">
+                        {/* Registry Hash */}
+                        <div className="bg-slate-800/40 p-2.5 rounded border border-slate-700/50">
+                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Registry Hash (SHA-256):</p>
+                            <code className="text-[11px] text-slate-300 font-mono break-all leading-relaxed block">
+                                {doc.documentHash}
+                            </code>
+                        </div>
+
+                        {/* Blockchain Hash */}
+                        <div className="bg-slate-800/40 p-2.5 rounded border border-slate-700/50">
+                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Blockchain TX:</p>
+                            {doc.blockchainTxHash ? (
+                                <a
+                                    href={`https://amoy.polygonscan.com/tx/${doc.blockchainTxHash}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-400 hover:text-blue-300 underline text-[11px] break-all font-mono block leading-relaxed"
+                                >
+                                    {doc.blockchainTxHash}
+                                </a>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                                    <span className="text-[11px] text-amber-500/80 font-medium italic">Pending on-chain registration...</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Right side */}
