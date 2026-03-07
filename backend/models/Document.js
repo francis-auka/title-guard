@@ -49,7 +49,7 @@ const documentSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ["registered", "pending", "failed"],
+            enum: ["registered", "pending", "failed", "verified"],
             default: "registered",
         },
         // Ownership Metadata (for fraud detection)
