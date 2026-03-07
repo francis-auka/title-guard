@@ -78,8 +78,44 @@ function ResultCard({ result }) {
                             mono
                         />
                     )}
+
+                    {/* Extracted Metadata Side-by-Side (if available) */}
+                    {(result.data.metadata || result.data.extractedMetadata) && (
+                        <div className="mt-4 pt-4 border-t border-slate-700/60">
+                            <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Data Extracted from Uploaded File</h4>
+                            <div className="grid grid-cols-2 gap-4 bg-slate-800/40 p-3 rounded-lg border border-slate-700/30">
+                                <DetailItem
+                                    label="Owner"
+                                    value={(result.data.metadata || result.data.extractedMetadata).ownerName}
+                                />
+                                <DetailItem
+                                    label="Parcel #"
+                                    value={(result.data.metadata || result.data.extractedMetadata).parcelNumber}
+                                    mono
+                                />
+                                <DetailItem
+                                    label="County"
+                                    value={(result.data.metadata || result.data.extractedMetadata).county}
+                                />
+                                <DetailItem
+                                    label="Area"
+                                    value={(result.data.metadata || result.data.extractedMetadata).area ? `${(result.data.metadata || result.data.extractedMetadata).area} Ha` : null}
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
+        </div>
+    );
+}
+
+function DetailItem({ label, value, mono }) {
+    if (!value) return null;
+    return (
+        <div className="space-y-0.5">
+            <p className="text-[9px] text-slate-500 uppercase font-bold">{label}</p>
+            <p className={`text-xs text-slate-200 truncate ${mono ? "font-mono" : ""}`}>{value}</p>
         </div>
     );
 }
@@ -172,8 +208,8 @@ function VerifyDocument() {
                             key={tab.id}
                             onClick={() => { setActiveTab(tab.id); reset(); }}
                             className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${activeTab === tab.id
-                                    ? "bg-accent-600 text-white shadow-sm"
-                                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                                ? "bg-accent-600 text-white shadow-sm"
+                                : "text-slate-400 hover:text-white hover:bg-white/5"
                                 }`}
                         >
                             {tab.label}
@@ -198,8 +234,8 @@ function VerifyDocument() {
                                 <div
                                     onClick={() => fileRef.current?.click()}
                                     className={`border-2 border-dashed rounded-xl p-7 text-center cursor-pointer transition-all duration-200 ${file
-                                            ? "border-accent-500/60 bg-accent-500/5"
-                                            : "border-slate-600 hover:border-slate-500 bg-slate-800/30"
+                                        ? "border-accent-500/60 bg-accent-500/5"
+                                        : "border-slate-600 hover:border-slate-500 bg-slate-800/30"
                                         }`}
                                 >
                                     <input

@@ -67,29 +67,58 @@ function FileDropZone({ file, onFileChange }) {
 function UploadDocument() {
     const navigate = useNavigate();
     const [file, setFile] = useState(null);
-    const [parcelNumber, setParcelNumber] = useState("");
-    const [ownerName, setOwnerName] = useState("");
-    const [county, setCounty] = useState("");
-    const [area, setArea] = useState("");
     const [notes, setNotes] = useState("");
     const [loading, setLoading] = useState(false);
+    const [extracting, setExtracting] = useState(false);
     const [error, setError] = useState("");
     const [metadataConflict, setMetadataConflict] = useState(null);
+    const [extractedData, setExtractedData] = useState(null);
     const [result, setResult] = useState(null);
 
-    const handleFileChange = (f) => {
+    const handleFileChange = async (f) => {
         setError("");
         setMetadataConflict(null);
-        if (!f) return;
-        if (!ALLOWED_TYPES.includes(f.type)) {
-            setError("Unsupported file type. Please upload a PDF, JPG, or PNG.");
+        setExtractedData(null);
+
+        if (!f) {
+            setFile(null);
             return;
         }
+
+        if (f.type !== "application/pdf") {
+            setError("Security Policy: Only PDF documents are allowed for registration to ensure accurate metadata extraction.");
+            return;
+        }
+
         if (f.size > MAX_SIZE_MB * 1024 * 1024) {
             setError(`File is too large. Maximum size is ${MAX_SIZE_MB} MB.`);
             return;
         }
+
         setFile(f);
+
+        // Auto-extract metadata
+        setExtracting(true);
+        try {
+            const formData = new FormData();
+            formData.append("document", f);
+            const { data } = await api.post("/documents/extract", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+
+            if (data.success) {
+                if (!data.data.parcelNumber || !data.data.ownerName) {
+                    setError("Could not extract required data (Parcel # or Owner) from this PDF. Please ensure it's a valid title deed.");
+                } else {
+                    setExtractedData(data.data);
+                }
+            }
+        } catch (err) {
+            setError("Failed to extract metadata from the document. Please try a different scan.");
+            console.error(err);
+        } finally {
+            setExtracting(false);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -98,19 +127,12 @@ function UploadDocument() {
         setMetadataConflict(null);
 
         if (!file) { setError("Please select a document file."); return; }
-        if (!parcelNumber.trim()) { setError("Parcel number is required."); return; }
-        if (!ownerName.trim()) { setError("Owner name is required."); return; }
-        if (!county.trim()) { setError("County is required."); return; }
-        if (!area.trim() || isNaN(area)) { setError("Valid land area is required."); return; }
+        if (!extractedData) { setError("Cannot proceed without valid document metadata."); return; }
 
         setLoading(true);
         try {
             const formData = new FormData();
             formData.append("document", file);
-            formData.append("parcelNumber", parcelNumber.trim());
-            formData.append("ownerName", ownerName.trim());
-            formData.append("county", county.trim());
-            formData.append("area", area.trim());
             formData.append("notes", notes.trim());
 
             const { data } = await api.post("/documents/register", formData, {
@@ -177,10 +199,7 @@ function UploadDocument() {
                                 onClick={() => {
                                     setResult(null);
                                     setFile(null);
-                                    setParcelNumber("");
-                                    setOwnerName("");
-                                    setCounty("");
-                                    setArea("");
+                                    setExtractedData(null);
                                     setNotes("");
                                 }}
                                 className="btn-outline flex-1"
@@ -202,18 +221,14 @@ function UploadDocument() {
             <div className="max-w-xl mx-auto">
                 {/* Header */}
                 <div className="mb-8">
-                    <h1 className="section-heading">Register a Title Deed</h1>
+                    <div className="flex items-center gap-3 mb-2">
+                        <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border border-blue-500/30">
+                            Security Enhanced
+                        </span>
+                        <h1 className="text-2xl font-bold text-white">Register Title Deed</h1>
+                    </div>
                     <p className="section-subheading">
-                        Upload your property document to generate a tamper-proof blockchain record.
-                    </p>
-                </div>
-
-                {/* Info banner */}
-                <div className="flex items-start gap-3 px-4 py-3 rounded-lg bg-accent-600/10 border border-accent-600/30 mb-6">
-                    <span className="text-accent-400 mt-0.5 text-lg">ℹ️</span>
-                    <p className="text-accent-300 text-sm">
-                        Your file is <strong>never stored</strong> on our servers. Only its cryptographic hash is
-                        registered on the blockchain.
+                        All property metadata is automatically extracted from your document to prevent fraud.
                     </p>
                 </div>
 
@@ -250,81 +265,65 @@ function UploadDocument() {
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {/* File upload */}
                         <div className="form-group">
-                            <label className="label">Title Deed Document</label>
+                            <label className="label">Title Deed PDF</label>
                             <FileDropZone file={file} onFileChange={handleFileChange} />
+                            <p className="text-[10px] text-slate-500 mt-2 italic px-1">
+                                Note: Only scanned PDF certificates are currently supported for automated metadata extraction.
+                            </p>
                         </div>
 
-                        {/* Owner Details Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="form-group md:col-span-2">
-                                <label htmlFor="ownerName" className="label">Full Name of Owner</label>
-                                <input
-                                    id="ownerName"
-                                    type="text"
-                                    value={ownerName}
-                                    onChange={(e) => { setOwnerName(e.target.value); setError(""); setMetadataConflict(null); }}
-                                    placeholder="e.g. JOHN DOE MURAGE"
-                                    className="input uppercase"
-                                    required
-                                />
+                        {/* Extraction Loader */}
+                        {extracting && (
+                            <div className="py-6 flex flex-col items-center justify-center bg-slate-800/20 rounded-xl border border-dashed border-slate-700 animate-pulse">
+                                <div className="w-8 h-8 border-2 border-accent-500 border-t-transparent rounded-full animate-spin mb-3" />
+                                <p className="text-xs text-slate-400 font-medium">Extracting metadata from PDF...</p>
                             </div>
+                        )}
 
-                            <div className="form-group">
-                                <label htmlFor="county" className="label">County</label>
-                                <input
-                                    id="county"
-                                    type="text"
-                                    value={county}
-                                    onChange={(e) => { setCounty(e.target.value); setError(""); setMetadataConflict(null); }}
-                                    placeholder="e.g. NAIROBI"
-                                    className="input uppercase"
-                                    required
-                                />
+                        {/* Extracted Metadata Preview */}
+                        {extractedData && !extracting && (
+                            <div className="bg-emerald-500/5 border border-emerald-500/30 rounded-xl p-5 space-y-4 animate-slide-up">
+                                <div className="flex items-center gap-2 pb-2 border-b border-emerald-500/20">
+                                    <span className="text-emerald-400 text-sm">✅</span>
+                                    <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-widest">Extracted Metadata</h3>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-y-4 gap-x-6">
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Parcel Number</p>
+                                        <p className="text-sm text-slate-200 font-mono font-bold tracking-tighter italic">{extractedData.parcelNumber}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">County</p>
+                                        <p className="text-sm text-slate-200 font-bold italic">{extractedData.county || "UNKNOWN"}</p>
+                                    </div>
+                                    <div className="space-y-1 col-span-2">
+                                        <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Registered Owner</p>
+                                        <p className="text-sm text-slate-200 font-bold italic">{extractedData.ownerName}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Land Area</p>
+                                        <p className="text-sm text-slate-200 font-bold italic">{extractedData.area} Hectares</p>
+                                    </div>
+                                </div>
+
+                                <p className="text-[10px] text-emerald-500/60 pt-2 italic text-center">
+                                    Please verify these details match your document before submitting.
+                                </p>
                             </div>
+                        )}
 
-                            <div className="form-group">
-                                <label htmlFor="area" className="label">Area (approx. hectares)</label>
-                                <input
-                                    id="area"
-                                    type="number"
-                                    step="0.0001"
-                                    value={area}
-                                    onChange={(e) => { setArea(e.target.value); setError(""); setMetadataConflict(null); }}
-                                    placeholder="0.045"
-                                    className="input"
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        {/* Parcel number */}
-                        <div className="form-group">
-                            <label htmlFor="parcelNumber" className="label">
-                                Land Parcel Number
-                                <span className="text-slate-500 font-normal ml-1">(e.g. LOC/1234/567)</span>
-                            </label>
-                            <input
-                                id="parcelNumber"
-                                type="text"
-                                value={parcelNumber}
-                                onChange={(e) => { setParcelNumber(e.target.value); setError(""); setMetadataConflict(null); }}
-                                placeholder="LOC/1234/567"
-                                className="input font-mono uppercase"
-                                required
-                            />
-                        </div>
-
-                        {/* Notes (optional) */}
+                        {/* Notes (optional) - The only manual field remains */}
                         <div className="form-group">
                             <label htmlFor="notes" className="label">
-                                Notes <span className="text-slate-500 font-normal">(optional)</span>
+                                Comments / Notes <span className="text-slate-500 font-normal ml-1">(optional)</span>
                             </label>
                             <textarea
                                 id="notes"
-                                rows={3}
+                                rows={2}
                                 value={notes}
                                 onChange={(e) => setNotes(e.target.value)}
-                                placeholder="e.g. Plot in Westlands, Nairobi…"
+                                placeholder="Describe the property location or additional details..."
                                 className="input resize-none"
                                 maxLength={500}
                             />
@@ -332,20 +331,20 @@ function UploadDocument() {
 
                         <button
                             type="submit"
-                            disabled={loading || !file}
-                            className="btn-primary w-full py-3 text-base"
+                            disabled={loading || extracting || !extractedData}
+                            className="btn-primary w-full py-4 text-base font-bold shadow-lg shadow-blue-500/10"
                         >
                             {loading ? (
                                 <>
-                                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    Registering on blockchain…
+                                    <span className="shrink-0 w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                    Registering Securely...
                                 </>
                             ) : (
                                 <>
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <svg className="w-5 h-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                                     </svg>
-                                    Register Title Deed
+                                    Secure Registration on Chain
                                 </>
                             )}
                         </button>

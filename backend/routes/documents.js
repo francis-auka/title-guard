@@ -4,6 +4,7 @@ const multer = require("multer");
 const { v4: uuidv4 } = require("uuid");
 const { protect } = require("../middleware/auth");
 const Document = require("../models/Document");
+const extractPdfData = require("../utils/extractPdfData");
 
 const router = express.Router();
 
@@ -34,6 +35,41 @@ const upload = multer({
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// POST /api/documents/extract
+// (Unprotected) Extracts metadata from a PDF file for frontend preview
+// ─────────────────────────────────────────────────────────────────────────────
+router.post("/extract", upload.single("document"), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: "No document file uploaded.",
+            });
+        }
+
+        if (req.file.mimetype !== "application/pdf") {
+            return res.status(400).json({
+                success: false,
+                message: "Metadata extraction is only supported for PDF files.",
+            });
+        }
+
+        const metadata = await extractPdfData(req.file.buffer);
+
+        res.json({
+            success: true,
+            data: metadata,
+        });
+    } catch (err) {
+        console.error("[Documents/Extract]", err.message);
+        res.status(500).json({
+            success: false,
+            message: "Failed to extract data from the document.",
+        });
+    }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // POST /api/documents/register   (protected)
 // Upload and register a title deed document
 // ─────────────────────────────────────────────────────────────────────────────
@@ -50,26 +86,23 @@ router.post(
                 });
             }
 
-            const { parcelNumber, ownerName, county, area, notes } = req.body;
+            // EXTRACT DATA DIRECTLY FROM PDF - Security Fix
+            const extracted = await extractPdfData(req.file.buffer);
 
-            if (!parcelNumber || !ownerName || !county || !area) {
+            if (!extracted.parcelNumber || !extracted.ownerName) {
                 return res.status(400).json({
                     success: false,
-                    message: "Parcel number, owner name, county, and land area are required.",
+                    message:
+                        "Could not extract required information (Parcel Number or Owner Name) from the document. Please ensure you are uploading a valid title deed PDF.",
+                    extracted,
                 });
             }
 
-            const normalizedParcel = parcelNumber.trim().toUpperCase();
-            const normalizedOwner = ownerName.trim().toUpperCase();
-            const normalizedCounty = county.trim().toUpperCase();
-            const numericArea = parseFloat(area);
-
-            if (isNaN(numericArea)) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Land area must be a valid number.",
-                });
-            }
+            const { notes } = req.body;
+            const normalizedParcel = extracted.parcelNumber;
+            const normalizedOwner = extracted.ownerName;
+            const normalizedCounty = extracted.county || "UNKNOWN";
+            const numericArea = parseFloat(extracted.area) || 0;
 
             // Compute SHA-256 hash of the file buffer
             const documentHash = crypto
@@ -104,7 +137,6 @@ router.post(
             }
 
             // 3. Metadata Conflict Check (Fraud Scenario 3)
-            // Same owner + county + area, but DIFFERENT parcel number
             const metadataConflict = await Document.findOne({
                 ownerName: normalizedOwner,
                 county: normalizedCounty,

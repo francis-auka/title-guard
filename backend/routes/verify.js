@@ -2,6 +2,7 @@ const express = require("express");
 const crypto = require("crypto");
 const multer = require("multer");
 const Document = require("../models/Document");
+const extractPdfData = require("../utils/extractPdfData");
 
 const router = express.Router();
 
@@ -36,6 +37,12 @@ router.post("/file", upload.single("document"), async (req, res) => {
             "name email"
         );
 
+        // EXTRACTION for comparison
+        let extracted = null;
+        if (req.file.mimetype === "application/pdf") {
+            extracted = await extractPdfData(req.file.buffer);
+        }
+
         if (matchedDocument) {
             return res.json({
                 success: true,
@@ -51,11 +58,13 @@ router.post("/file", upload.single("document"), async (req, res) => {
                         ? matchedDocument.owner.name
                         : "Unknown",
                     status: matchedDocument.status,
+                    metadata: extracted, // Show what's currently in the file
                 },
             });
         } else {
-            // Check if there's a parcel number provided — might detect tampering vs unknown
-            const { parcelNumber } = req.body;
+            // Check if there's a parcel number provided or extracted
+            const parcelNumber = req.body.parcelNumber || (extracted ? extracted.parcelNumber : null);
+
             if (parcelNumber) {
                 const normalizedParcel = parcelNumber.trim().toUpperCase();
                 const parcelRecord = await Document.findOne({
@@ -68,12 +77,13 @@ router.post("/file", upload.single("document"), async (req, res) => {
                         authentic: false,
                         tampered: true,
                         message:
-                            "⚠️ TAMPERED — A document is registered for this parcel number, but the uploaded file does NOT match.",
+                            "⚠️ TAMPERED — A document is registered for this parcel number, but the uploaded file does NOT match the registered content.",
                         data: {
                             parcelNumber: normalizedParcel,
                             registeredAt: parcelRecord.createdAt,
                             computedHash: documentHash,
                             registeredHash: parcelRecord.documentHash,
+                            extractedMetadata: extracted,
                         },
                     });
                 }
@@ -87,6 +97,7 @@ router.post("/file", upload.single("document"), async (req, res) => {
                     "❌ Document NOT found in the registry. This file has not been registered.",
                 data: {
                     computedHash: documentHash,
+                    extractedMetadata: extracted,
                 },
             });
         }
