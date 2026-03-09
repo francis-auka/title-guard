@@ -156,4 +156,35 @@ contract TitleGuard {
     {
         return hashToParcel[documentHash];
     }
+
+    /**
+     * @notice Update the document hash for a registered parcel (Transfer).
+     * @param parcelNumber The land parcel identifier
+     * @param newDocumentHash The new SHA-256 hash of the title deed
+     */
+    function transferDocument(
+        string calldata parcelNumber,
+        bytes32 newDocumentHash
+    ) external {
+        if (!parcelRegistered[parcelNumber]) {
+            revert ParcelNotRegistered(parcelNumber);
+        }
+        if (newDocumentHash == bytes32(0)) revert InvalidInput();
+
+        // Check if new hash is already registered elsewhere
+        if (bytes(hashToParcel[newDocumentHash]).length > 0) {
+             revert HashAlreadyRegistered(newDocumentHash, hashToParcel[newDocumentHash]);
+        }
+
+        bytes32 oldHash = parcelToHash[parcelNumber];
+        
+        // Remove old hash mapping
+        delete hashToParcel[oldHash];
+
+        // Update with new hash
+        parcelToHash[parcelNumber] = newDocumentHash;
+        hashToParcel[newDocumentHash] = parcelNumber;
+
+        emit DocumentRegistered(parcelNumber, newDocumentHash, msg.sender, block.timestamp);
+    }
 }

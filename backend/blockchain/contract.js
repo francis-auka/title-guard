@@ -47,4 +47,35 @@ async function registerDocumentOnChain(documentHash, parcelNumber) {
     }
 }
 
-module.exports = { registerDocumentOnChain };
+async function transferDocumentOnChain(parcelNumber, newDocumentHash) {
+    try {
+        console.log('--- Blockchain Transfer Initiation ---');
+        console.log('Attempting blockchain transfer update...');
+
+        if (!process.env.ALCHEMY_RPC_URL || !process.env.PRIVATE_KEY || !process.env.CONTRACT_ADDRESS) {
+            throw new Error('Missing required blockchain environment variables.');
+        }
+
+        const provider = new ethers.JsonRpcProvider(process.env.ALCHEMY_RPC_URL);
+        const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+        const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, ABI, wallet);
+
+        const hashBytes32 = newDocumentHash.startsWith('0x') ? newDocumentHash : `0x${newDocumentHash}`;
+
+        console.log('Sending transfer transaction for parcel:', parcelNumber);
+
+        const tx = await contract.transferDocument(parcelNumber, hashBytes32);
+        console.log('Transaction sent. Waiting for receipt...');
+
+        const receipt = await tx.wait();
+        console.log('Blockchain TX hash (Transfer):', receipt.hash);
+
+        return receipt.hash;
+    } catch (error) {
+        console.error('Blockchain transfer failed:', error.message);
+        if (error.data) console.error('Error data:', error.data);
+        return null;
+    }
+}
+
+module.exports = { registerDocumentOnChain, transferDocumentOnChain };

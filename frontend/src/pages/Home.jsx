@@ -38,6 +38,12 @@ const features = [
         description:
             "Designed around Kenya's land registry system with parcel number formats and Kenyan property law considerations.",
     },
+    {
+        icon: "📬",
+        title: "Secure Transfer",
+        description:
+            "Transfer property deeds to new owners via secure email confirmation and permanent on-chain updates.",
+    },
 ];
 
 function StatCard({ value, label }) {

@@ -141,6 +141,14 @@ function VerifyDocument() {
     const [result, setResult] = useState(null);
     const fileRef = useRef(null);
 
+    // M-Pesa Payment States
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [phone, setPhone] = useState("");
+    const [paymentLoading, setPaymentLoading] = useState(false);
+    const [paymentStatus, setPaymentStatus] = useState("idle"); // idle, pending, completed, failed
+    const [checkoutRequestID, setCheckoutRequestID] = useState("");
+    const [pendingAction, setPendingAction] = useState(null); // 'file' or 'id'
+
     const reset = () => {
         setResult(null);
         setError("");
@@ -167,12 +175,12 @@ function VerifyDocument() {
             setError(err.response?.data?.message || "Verification failed. Please try again.");
         } finally {
             setLoading(false);
+            setPaymentLoading(false);
         }
     };
 
     const handleIdVerify = async (e) => {
-        e.preventDefault();
-        if (!verificationId.trim()) { setError("Please enter a verification ID."); return; }
+        if (e) e.preventDefault();
         setLoading(true);
         setError("");
         setResult(null);
@@ -187,7 +195,55 @@ function VerifyDocument() {
             }
         } finally {
             setLoading(false);
+            setPaymentLoading(false);
         }
+    };
+
+    const handleInitiatePayment = async (e) => {
+        e.preventDefault();
+        setPaymentLoading(true);
+        setError("");
+
+        try {
+            const { data } = await api.post("/mpesa/initiate", {
+                phone,
+                purpose: "verification"
+            });
+
+            setCheckoutRequestID(data.checkoutRequestID);
+            setPaymentStatus("pending");
+
+            // Start polling
+            startPolling(data.checkoutRequestID);
+        } catch (err) {
+            setError(err.response?.data?.message || "Failed to initiate payment.");
+            setPaymentLoading(false);
+        }
+    };
+
+    const startPolling = (requestID) => {
+        const interval = setInterval(async () => {
+            try {
+                const { data } = await api.get(`/mpesa/status/${requestID}`);
+
+                if (data.status === "completed") {
+                    clearInterval(interval);
+                    setPaymentStatus("completed");
+                    // Automatically proceed to verification
+                    if (pendingAction === 'file') {
+                        handleFileVerify();
+                    } else {
+                        handleIdVerify();
+                    }
+                } else if (data.status === "failed") {
+                    clearInterval(interval);
+                    setPaymentStatus("failed");
+                    setPaymentLoading(false);
+                }
+            } catch (err) {
+                console.error("Polling error:", err);
+            }
+        }, 5000);
     };
 
     return (
@@ -277,17 +333,22 @@ function VerifyDocument() {
                             </div>
 
                             <button
-                                type="submit"
+                                type="button"
+                                onClick={() => {
+                                    if (!file) { setError("Please select a file to verify."); return; }
+                                    setPendingAction('file');
+                                    setShowPaymentModal(true);
+                                }}
                                 disabled={loading || !file}
                                 className="btn-primary w-full py-3 text-base"
                             >
                                 {loading ? (
                                     <>
                                         <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                        Verifying…
+                                        Processing…
                                     </>
                                 ) : (
-                                    "Verify Document"
+                                    "Proceed to Payment"
                                 )}
                             </button>
                         </form>
@@ -315,17 +376,22 @@ function VerifyDocument() {
                             </div>
 
                             <button
-                                type="submit"
+                                type="button"
+                                onClick={() => {
+                                    if (!verificationId.trim()) { setError("Please enter a verification ID."); return; }
+                                    setPendingAction('id');
+                                    setShowPaymentModal(true);
+                                }}
                                 disabled={loading || !verificationId.trim()}
                                 className="btn-primary w-full py-3 text-base"
                             >
                                 {loading ? (
                                     <>
                                         <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                        Looking up…
+                                        Processing…
                                     </>
                                 ) : (
-                                    "Look Up Document"
+                                    "Proceed to Payment"
                                 )}
                             </button>
                         </form>
@@ -345,6 +411,121 @@ function VerifyDocument() {
                     )}
                 </div>
             </div>
+
+            {/* M-Pesa Payment Modal */}
+            {showPaymentModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+                    <div className="card-elevated w-full max-w-md p-8 relative overflow-hidden shadow-2xl border-slate-700/50">
+                        {/* TitleGuard Logo/Icon */}
+                        <div className="flex justify-center mb-6">
+                            <div className="w-16 h-16 rounded-full bg-blue-600/10 border border-blue-500/20 flex items-center justify-center">
+                                <span className="text-3xl">🛡️</span>
+                            </div>
+                        </div>
+
+                        <div className="text-center mb-8">
+                            <h2 className="text-2xl font-bold text-white mb-2">Complete Payment</h2>
+                            <div className="inline-block px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 mb-2">
+                                <span className="text-2xl font-bold text-emerald-400">KES 1</span>
+                            </div>
+                            <p className="text-slate-400 text-sm">Document Verification Fee</p>
+                        </div>
+
+                        {paymentStatus === "idle" && (
+                            <form onSubmit={handleInitiatePayment} className="space-y-6">
+                                <div>
+                                    <label className="label">M-Pesa Phone Number</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value)}
+                                        placeholder="e.g. 0712345678"
+                                        className="input text-center text-lg tracking-widest font-mono"
+                                    />
+                                    <p className="text-[10px] text-slate-500 mt-2 text-center uppercase tracking-wider">
+                                        You will receive an STK Push prompt on this phone
+                                    </p>
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setShowPaymentModal(false); setPaymentStatus("idle"); }}
+                                        className="btn-outline flex-1 py-3"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={paymentLoading}
+                                        className="btn-primary flex-1 py-3"
+                                    >
+                                        {paymentLoading ? "Requesting..." : "Pay Now"}
+                                    </button>
+                                </div>
+                            </form>
+                        )}
+
+                        {paymentStatus === "pending" && (
+                            <div className="text-center py-10 space-y-6">
+                                <div className="relative mx-auto w-20 h-20">
+                                    <div className="absolute inset-0 border-4 border-blue-500/20 rounded-full" />
+                                    <div className="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                                    <span className="absolute inset-0 flex items-center justify-center text-2xl">📱</span>
+                                </div>
+                                <div>
+                                    <p className="text-white font-bold mb-1">Check your phone</p>
+                                    <p className="text-slate-400 text-sm leading-relaxed px-4">
+                                        Enter your M-Pesa PIN on <strong>{phone}</strong> to confirm the payment of <strong>KES 1</strong>.
+                                    </p>
+                                </div>
+                                <div className="px-4 py-2 rounded bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-500 inline-block uppercase font-bold tracking-tighter">
+                                    Waiting for confirmation...
+                                </div>
+                            </div>
+                        )}
+
+                        {paymentStatus === "completed" && (
+                            <div className="text-center py-10 space-y-4 animate-in zoom-in duration-300">
+                                <div className="w-20 h-20 bg-emerald-500/20 border border-emerald-500/40 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <svg className="w-10 h-10 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-xl font-bold text-white">Payment Confirmed!</h3>
+                                <p className="text-slate-400 text-sm">Proceeding with verification...</p>
+                            </div>
+                        )}
+
+                        {paymentStatus === "failed" && (
+                            <div className="text-center py-10 space-y-6">
+                                <div className="w-20 h-20 bg-red-500/20 border border-red-500/40 rounded-full flex items-center justify-center mx-auto">
+                                    <span className="text-4xl text-red-500">❌</span>
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-white">Payment Failed</h3>
+                                    <p className="text-slate-400 text-sm mt-1">
+                                        The transaction could not be completed. Please try again.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setPaymentStatus("idle")}
+                                    className="btn-primary w-full py-3"
+                                >
+                                    Try Again
+                                </button>
+                                <button
+                                    onClick={() => setShowPaymentModal(false)}
+                                    className="text-slate-500 hover:text-white text-xs uppercase font-bold"
+                                >
+                                    Dismiss
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

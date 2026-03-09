@@ -18,7 +18,7 @@ function formatDate(iso) {
     });
 }
 
-function DocumentRow({ doc }) {
+function DocumentRow({ doc, onTransfer, onCancel }) {
     const [copied, setCopied] = useState(false);
 
     const copy = () => {
@@ -101,6 +101,22 @@ function DocumentRow({ doc }) {
                 {/* Right side */}
                 <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
                     <span className="badge-success text-xs">{doc.status || "registered"}</span>
+                    {doc.pendingTransfer?.token && (
+                        <button
+                            onClick={() => onCancel(doc._id)}
+                            className="bg-red-600 hover:bg-red-500 text-white text-[10px] uppercase font-bold px-3 py-1 rounded transition-colors mt-2"
+                        >
+                            Cancel Transfer
+                        </button>
+                    )}
+                    {(doc.status === 'registered' || doc.status === 'verified') && !doc.pendingTransfer?.token && (
+                        <button
+                            onClick={() => onTransfer(doc)}
+                            className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] uppercase font-bold px-3 py-1 rounded transition-colors mt-2"
+                        >
+                            Transfer
+                        </button>
+                    )}
                     <span className="text-slate-500 text-xs">{formatDate(doc.registeredAt || doc.createdAt)}</span>
                 </div>
             </div>
@@ -115,6 +131,52 @@ function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [page, setPage] = useState(1);
+    const [transferDoc, setTransferDoc] = useState(null);
+    const [transferLoading, setTransferLoading] = useState(false);
+    const [transferSuccess, setTransferSuccess] = useState("");
+    const [transferError, setTransferError] = useState("");
+    const [newOwnerName, setNewOwnerName] = useState("");
+    const [newOwnerEmail, setNewOwnerEmail] = useState("");
+
+    const handleInitiateTransfer = async (e) => {
+        e.preventDefault();
+        setTransferLoading(true);
+        setTransferError("");
+        setTransferSuccess("");
+
+        try {
+            const { data } = await api.post("/transfer/initiate", {
+                documentId: transferDoc._id,
+                toEmail: newOwnerEmail,
+                toName: newOwnerName
+            });
+
+            if (data.success) {
+                setTransferSuccess(`Transfer initiated! Confirmation email sent to ${newOwnerEmail}`);
+                setNewOwnerName("");
+                setNewOwnerEmail("");
+                fetchDocuments(page);
+            }
+        } catch (err) {
+            setTransferError(err.response?.data?.message || "Transfer initiation failed.");
+        } finally {
+            setTransferLoading(false);
+        }
+    };
+
+    const handleCancelTransfer = async (documentId) => {
+        if (!window.confirm("Are you sure you want to cancel this transfer? No email will be sent to the recipient about the cancellation.")) return;
+
+        try {
+            const { data } = await api.delete(`/transfer/cancel/${documentId}`);
+
+            if (data.success) {
+                fetchDocuments(page); // Refresh the list
+            }
+        } catch (err) {
+            alert(err.response?.data?.message || "Failed to cancel transfer.");
+        }
+    };
 
     const fetchDocuments = async (p = 1) => {
         setLoading(true);
@@ -203,7 +265,12 @@ function Dashboard() {
                     <>
                         <div className="space-y-3">
                             {documents.map((doc) => (
-                                <DocumentRow key={doc._id} doc={doc} />
+                                <DocumentRow
+                                    key={doc._id}
+                                    doc={doc}
+                                    onTransfer={setTransferDoc}
+                                    onCancel={handleCancelTransfer}
+                                />
                             ))}
                         </div>
 
@@ -227,6 +294,78 @@ function Dashboard() {
                                 >
                                     Next →
                                 </button>
+                            </div>
+                        )}
+                        {/* Transfer Modal */}
+                        {transferDoc && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                                <div className="card w-full max-w-md p-6 shadow-2xl border-slate-700 animate-in fade-in zoom-in duration-200">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h2 className="text-xl font-bold text-white">Transfer Property</h2>
+                                        <button onClick={() => { setTransferDoc(null); setTransferSuccess(""); setTransferError(""); }} className="text-slate-500 hover:text-white transition-colors">
+                                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    {transferSuccess ? (
+                                        <div className="text-center py-6">
+                                            <div className="w-16 h-16 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                </svg>
+                                            </div>
+                                            <p className="text-emerald-400 font-medium mb-6">{transferSuccess}</p>
+                                            <button onClick={() => setTransferDoc(null)} className="btn-primary w-full">Close</button>
+                                        </div>
+                                    ) : (
+                                        <form onSubmit={handleInitiateTransfer}>
+                                            <div className="bg-slate-800/50 p-3 rounded mb-6 border border-slate-700/50">
+                                                <p className="text-xs text-slate-400 uppercase font-bold mb-1">Property to Transfer:</p>
+                                                <p className="text-white font-mono text-sm">{transferDoc.parcelNumber}</p>
+                                            </div>
+
+                                            {transferError && (
+                                                <div className="p-3 rounded bg-red-500/10 border border-red-500/30 text-red-500 text-xs mb-4">
+                                                    {transferError}
+                                                </div>
+                                            )}
+
+                                            <div className="space-y-4 mb-8">
+                                                <div>
+                                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">New Owner Full Name</label>
+                                                    <input
+                                                        type="text"
+                                                        required
+                                                        value={newOwnerName}
+                                                        onChange={(e) => setNewOwnerName(e.target.value)}
+                                                        className="input-field"
+                                                        placeholder="Enter full legal name"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">New Owner Email</label>
+                                                    <input
+                                                        type="email"
+                                                        required
+                                                        value={newOwnerEmail}
+                                                        onChange={(e) => setNewOwnerEmail(e.target.value)}
+                                                        className="input-field"
+                                                        placeholder="Enter email address"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="flex gap-3">
+                                                <button type="button" onClick={() => setTransferDoc(null)} className="btn-outline flex-1 py-2.5">Cancel</button>
+                                                <button type="submit" disabled={transferLoading} className="btn-primary flex-1 py-2.5">
+                                                    {transferLoading ? "Processing..." : "Initiate Transfer"}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </>

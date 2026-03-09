@@ -49,8 +49,27 @@ const documentSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ["registered", "pending", "failed", "verified"],
+            enum: ["registered", "pending", "failed", "verified", "transferred"],
             default: "registered",
+        },
+        previousOwner: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            default: null,
+        },
+        transferHistory: [
+            {
+                fromOwner: { type: String },
+                toOwner: { type: String },
+                transferDate: { type: Date, default: Date.now },
+                blockchainTxHash: { type: String },
+            },
+        ],
+        pendingTransfer: {
+            toEmail: { type: String, default: null },
+            toName: { type: String, default: null },
+            token: { type: String, default: null },
+            expiresAt: { type: Date, default: null },
         },
         // Ownership Metadata (for fraud detection)
         ownerName: {
@@ -81,8 +100,6 @@ const documentSchema = new mongoose.Schema(
 );
 
 // Indexes
-documentSchema.index({ documentHash: 1 });
-documentSchema.index({ parcelNumber: 1 });
 documentSchema.index({ ownerName: 1, county: 1, area: 1 }); // For metadata conflict check
 documentSchema.index({ parcelNumber: "text", fileName: "text", ownerName: "text" });
 

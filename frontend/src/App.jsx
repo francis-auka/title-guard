@@ -8,6 +8,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import ConfirmTransfer from "./pages/ConfirmTransfer";
 import UploadDocument from "./pages/UploadDocument";
 import VerifyDocument from "./pages/VerifyDocument";
 
@@ -23,6 +24,7 @@ function App() {
                             <Route path="/" element={<Home />} />
                             <Route path="/login" element={<Login />} />
                             <Route path="/register" element={<Register />} />
+                            <Route path="/confirm-transfer/:token" element={<ConfirmTransfer />} />
                             <Route path="/verify" element={<VerifyDocument />} />
 
                             {/* Protected routes */}

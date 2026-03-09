@@ -7,6 +7,7 @@ const mongoose = require("mongoose");
 const authRoutes = require("./routes/auth");
 const documentRoutes = require("./routes/documents");
 const verifyRoutes = require("./routes/verify");
+const transferRoutes = require("./routes/transferRoutes");
 
 // ─── App Init ─────────────────────────────────────────────────────────────────
 const app = express();
@@ -35,6 +36,8 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/verify", verifyRoutes);
+app.use("/api/transfer", transferRoutes);
+app.use("/api/mpesa", require("./routes/mpesaRoutes"));
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────────
 app.use((req, res) => {
