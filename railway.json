@@ -4,8 +4,7 @@
         "builder": "NIXPACKS",
         "watchPatterns": [
             "/backend/**"
-        ],
-        "buildCommand": "npm install --prefix backend"
+        ]
     },
     "deploy": {
         "startCommand": "cd backend && npm start",
