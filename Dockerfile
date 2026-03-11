@@ -1,5 +1,5 @@
-# Use Node.js 18 (or whichever version you prefer)
-FROM node:18-alpine
+# Use Node.js 22 (required for newer pdfjs-dist)
+FROM node:22-alpine
 
 # Create app directory
 WORKDIR /app
