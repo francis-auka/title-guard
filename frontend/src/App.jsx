@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import ConfirmTransfer from "./pages/ConfirmTransfer";
 import UploadDocument from "./pages/UploadDocument";
 import VerifyDocument from "./pages/VerifyDocument";
+import RegistryExplorer from "./pages/RegistryExplorer";
 
 function App() {
     return (
@@ -26,6 +27,7 @@ function App() {
                             <Route path="/register" element={<Register />} />
                             <Route path="/confirm-transfer/:token" element={<ConfirmTransfer />} />
                             <Route path="/verify" element={<VerifyDocument />} />
+                            <Route path="/registry" element={<RegistryExplorer />} />
 
                             {/* Protected routes */}
                             <Route

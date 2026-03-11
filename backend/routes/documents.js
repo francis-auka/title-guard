@@ -155,6 +155,23 @@ router.post(
                 });
             }
 
+            // REGISTRY CROSS-REFERENCE CHECK
+            const { crossReference } = require("../controllers/registryController");
+            const registryCheck = await crossReference(normalizedParcel, normalizedOwner);
+
+            // If flagged — owner mismatch with registry — BLOCK registration
+            if (registryCheck.status === "flagged") {
+                return res.status(409).json({
+                    success: false,
+                    message: registryCheck.message,
+                    conflict: true,
+                    conflictType: "REGISTRY_OWNER_MISMATCH",
+                    registryOwner: registryCheck.registryRecord.ownerName,
+                });
+            }
+
+            let verificationStatus = registryCheck.status; // 'verified' or 'unverified'
+
             // Create verification UUID
             const verificationId = uuidv4();
 
@@ -171,6 +188,7 @@ router.post(
                 fileSize: req.file.size,
                 mimeType: req.file.mimetype,
                 notes: notes || "",
+                verificationStatus,
             });
 
             // BLOCKCHAIN REGISTRATION

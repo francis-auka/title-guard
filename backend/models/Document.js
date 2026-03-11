@@ -52,6 +52,11 @@ const documentSchema = new mongoose.Schema(
             enum: ["registered", "pending", "failed", "verified", "transferred"],
             default: "registered",
         },
+        verificationStatus: {
+            type: String,
+            enum: ["verified", "unverified", "flagged"],
+            default: "unverified",
+        },
         previousOwner: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",

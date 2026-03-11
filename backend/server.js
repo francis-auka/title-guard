@@ -38,6 +38,7 @@ app.use("/api/documents", documentRoutes);
 app.use("/api/verify", verifyRoutes);
 app.use("/api/transfer", transferRoutes);
 app.use("/api/mpesa", require("./routes/mpesaRoutes"));
+app.use("/api/registry", require("./routes/registryRoutes"));
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────────
 app.use((req, res) => {

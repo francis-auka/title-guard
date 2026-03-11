@@ -100,7 +100,24 @@ function DocumentRow({ doc, onTransfer, onCancel }) {
 
                 {/* Right side */}
                 <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
-                    <span className="badge-success text-xs">{doc.status || "registered"}</span>
+                    {doc.verificationStatus === 'verified' && (
+                        <div className="flex flex-col items-end">
+                            <span className="badge-success text-xs font-bold px-2 py-0.5 rounded">✅ REGISTRY VERIFIED</span>
+                            <span className="text-[9px] text-emerald-500/80 font-medium uppercase mt-0.5 tracking-tighter">Confirmed against land registry</span>
+                        </div>
+                    )}
+                    {(doc.verificationStatus === 'unverified' || !doc.verificationStatus) && (
+                        <div className="flex flex-col items-end">
+                            <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 text-xs font-bold px-2 py-0.5 rounded">⚠️ UNVERIFIED</span>
+                            <span className="text-[9px] text-amber-500/80 font-medium uppercase mt-0.5 tracking-tighter">Not found in land registry</span>
+                        </div>
+                    )}
+                    {doc.verificationStatus === 'flagged' && (
+                        <div className="flex flex-col items-end">
+                            <span className="bg-red-500/10 text-red-500 border border-red-500/20 text-xs font-bold px-2 py-0.5 rounded">🚨 FLAGGED</span>
+                            <span className="text-[9px] text-red-500/80 font-medium uppercase mt-0.5 tracking-tighter">Owner mismatch detected</span>
+                        </div>
+                    )}
                     {doc.pendingTransfer?.token && (
                         <button
                             onClick={() => onCancel(doc._id)}

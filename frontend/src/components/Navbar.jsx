@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 
 const navLinks = [
     { to: "/verify", label: "Verify Document", public: true },
+    { to: "/registry", label: "Registry", public: true },
     { to: "/dashboard", label: "Dashboard", public: false },
     { to: "/upload", label: "Register Deed", public: false },
 ];

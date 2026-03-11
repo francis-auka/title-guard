@@ -58,6 +58,7 @@ router.post("/file", upload.single("document"), async (req, res) => {
                         ? matchedDocument.owner.name
                         : "Unknown",
                     status: matchedDocument.status,
+                    verificationStatus: matchedDocument.verificationStatus,
                     metadata: extracted, // Show what's currently in the file
                 },
             });
@@ -72,21 +73,43 @@ router.post("/file", upload.single("document"), async (req, res) => {
                 });
 
                 if (parcelRecord) {
+                    // REGISTRY CHECK FOR TAMPERED CASE
+                    const { crossReference } = require("../controllers/registryController");
+                    const registryCheck = await crossReference(parcelRecord.parcelNumber, parcelRecord.ownerName);
+
                     return res.json({
                         success: true,
                         authentic: false,
                         tampered: true,
                         message:
                             "⚠️ TAMPERED — A document is registered for this parcel number, but the uploaded file does NOT match the registered content.",
+                        registryStatus: registryCheck.status,
+                        registryMessage: registryCheck.message,
                         data: {
                             parcelNumber: normalizedParcel,
                             registeredAt: parcelRecord.createdAt,
                             computedHash: documentHash,
                             registeredHash: parcelRecord.documentHash,
                             extractedMetadata: extracted,
+                            verificationStatus: parcelRecord.verificationStatus,
                         },
+                        registryRecord: registryCheck.registryRecord ? {
+                            titleNumber: registryCheck.registryRecord.titleNumber,
+                            county: registryCheck.registryRecord.county,
+                            area: registryCheck.registryRecord.area,
+                            landUse: registryCheck.registryRecord.landUse,
+                            tenure: registryCheck.registryRecord.tenure,
+                            dateIssued: registryCheck.registryRecord.dateIssued,
+                        } : null,
                     });
                 }
+            }
+
+            // REGISTRY CHECK FOR UNREGISTERED CASE
+            let registryCheck = { status: 'unverified', message: 'This parcel was not found in our registry simulation.', registryRecord: null };
+            if (extracted && extracted.parcelNumber && extracted.ownerName) {
+                const { crossReference } = require("../controllers/registryController");
+                registryCheck = await crossReference(extracted.parcelNumber, extracted.ownerName);
             }
 
             return res.json({
@@ -95,10 +118,20 @@ router.post("/file", upload.single("document"), async (req, res) => {
                 tampered: false,
                 message:
                     "❌ Document NOT found in the registry. This file has not been registered.",
+                registryStatus: registryCheck.status,
+                registryMessage: registryCheck.message,
                 data: {
                     computedHash: documentHash,
                     extractedMetadata: extracted,
                 },
+                registryRecord: registryCheck.registryRecord ? {
+                    titleNumber: registryCheck.registryRecord.titleNumber,
+                    county: registryCheck.registryRecord.county,
+                    area: registryCheck.registryRecord.area,
+                    landUse: registryCheck.registryRecord.landUse,
+                    tenure: registryCheck.registryRecord.tenure,
+                    dateIssued: registryCheck.registryRecord.dateIssued,
+                } : null,
             });
         }
     } catch (err) {

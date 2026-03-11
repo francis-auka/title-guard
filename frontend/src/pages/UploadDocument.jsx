@@ -81,6 +81,13 @@ function UploadDocument() {
     const [paymentLoading, setPaymentLoading] = useState(false);
     const [paymentStatus, setPaymentStatus] = useState("idle"); // idle, pending, completed, failed
     const [checkoutRequestID, setCheckoutRequestID] = useState("");
+    const [modalError, setModalError] = useState("");
+
+    const closePaymentModal = () => {
+        setShowPaymentModal(false);
+        setPaymentStatus("idle");
+        setModalError("");
+    };
 
     const handleFileChange = async (f) => {
         setError("");
@@ -223,9 +230,13 @@ function UploadDocument() {
             if (data.success) {
                 setResult(data.data);
                 setShowPaymentModal(false);
+                setPaymentStatus("idle");
             }
         } catch (err) {
-            setError(err.response?.data?.message || "Registration failed after payment. Please contact support.");
+            // Surface error inside the modal so the user isn't stuck
+            const msg = err.response?.data?.message || "Registration failed after payment. Please contact support.";
+            setModalError(msg);
+            setPaymentStatus("failed");
         } finally {
             setLoading(false);
             setPaymentLoading(false);
@@ -431,6 +442,15 @@ function UploadDocument() {
             {showPaymentModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
                     <div className="card-elevated w-full max-w-md p-8 relative overflow-hidden shadow-2xl border-slate-700/50">
+                        {/* Close Button — always visible */}
+                        <button
+                            onClick={closePaymentModal}
+                            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full text-slate-500 hover:text-white hover:bg-slate-700 transition-colors"
+                            aria-label="Close"
+                        >
+                            ✕
+                        </button>
+
                         {/* TitleGuard Logo/Icon */}
                         <div className="flex justify-center mb-6">
                             <div className="w-16 h-16 rounded-full bg-blue-600/10 border border-blue-500/20 flex items-center justify-center">
@@ -466,7 +486,7 @@ function UploadDocument() {
                                 <div className="flex gap-3">
                                     <button
                                         type="button"
-                                        onClick={() => { setShowPaymentModal(false); setPaymentStatus("idle"); }}
+                                        onClick={closePaymentModal}
                                         className="btn-outline flex-1 py-3"
                                     >
                                         Cancel
@@ -519,19 +539,23 @@ function UploadDocument() {
                                     <span className="text-4xl text-red-500">❌</span>
                                 </div>
                                 <div>
-                                    <h3 className="text-xl font-bold text-white">Payment Failed</h3>
+                                    <h3 className="text-xl font-bold text-white">
+                                        {modalError ? "Registration Failed" : "Payment Failed"}
+                                    </h3>
                                     <p className="text-slate-400 text-sm mt-1">
-                                        The transaction could not be completed. Please try again.
+                                        {modalError || "The transaction could not be completed. Please try again."}
                                     </p>
                                 </div>
+                                {!modalError && (
+                                    <button
+                                        onClick={() => { setPaymentStatus("idle"); setModalError(""); }}
+                                        className="btn-primary w-full py-3"
+                                    >
+                                        Try Again
+                                    </button>
+                                )}
                                 <button
-                                    onClick={() => setPaymentStatus("idle")}
-                                    className="btn-primary w-full py-3"
-                                >
-                                    Try Again
-                                </button>
-                                <button
-                                    onClick={() => setShowPaymentModal(false)}
+                                    onClick={closePaymentModal}
                                     className="text-slate-500 hover:text-white text-xs uppercase font-bold"
                                 >
                                     Dismiss

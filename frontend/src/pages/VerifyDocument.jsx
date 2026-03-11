@@ -104,6 +104,42 @@ function ResultCard({ result }) {
                             </div>
                         </div>
                     )}
+
+                    {/* REGISTRY DETAILS PANEL */}
+                    {result.registryStatus && (
+                        <div className={`mt-6 rounded-lg p-5 border-l-4 ${result.registryStatus === 'verified'
+                            ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400'
+                            : result.registryStatus === 'flagged'
+                                ? 'bg-red-500/10 border-red-500 text-red-400'
+                                : 'bg-amber-500/10 border-amber-500 text-amber-400'
+                            }`}>
+                            <div className="flex items-center gap-2 mb-3">
+                                <span className="text-xl">
+                                    {result.registryStatus === 'verified' ? '✅' : result.registryStatus === 'flagged' ? '🚨' : '⚠️'}
+                                </span>
+                                <h4 className="font-bold uppercase tracking-tight">
+                                    {result.registryStatus === 'verified' && 'Registry Verified'}
+                                    {result.registryStatus === 'flagged' && 'Fraud Detected'}
+                                    {result.registryStatus === 'unverified' && 'Not in Registry'}
+                                </h4>
+                            </div>
+
+                            <p className="text-xs mb-4 opacity-90 leading-relaxed">
+                                {result.registryMessage}
+                            </p>
+
+                            {result.registryRecord && (
+                                <div className="grid grid-cols-2 gap-y-3 gap-x-4 pt-4 border-t border-white/10">
+                                    <DetailItem label="Title Number" value={result.registryRecord.titleNumber} />
+                                    <DetailItem label="County" value={result.registryRecord.county} />
+                                    <DetailItem label="Area" value={result.registryRecord.area} />
+                                    <DetailItem label="Land Use" value={result.registryRecord.landUse} />
+                                    <DetailItem label="Tenure" value={result.registryRecord.tenure} />
+                                    <DetailItem label="Date Issued" value={result.registryRecord.dateIssued} />
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             )}
         </div>
@@ -148,6 +184,13 @@ function VerifyDocument() {
     const [paymentStatus, setPaymentStatus] = useState("idle"); // idle, pending, completed, failed
     const [checkoutRequestID, setCheckoutRequestID] = useState("");
     const [pendingAction, setPendingAction] = useState(null); // 'file' or 'id'
+    const [modalError, setModalError] = useState("");
+
+    const closePaymentModal = () => {
+        setShowPaymentModal(false);
+        setPaymentStatus("idle");
+        setModalError("");
+    };
 
     const reset = () => {
         setResult(null);
@@ -158,7 +201,7 @@ function VerifyDocument() {
     };
 
     const handleFileVerify = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault(); // Guard: may be called without event from payment polling
         if (!file) { setError("Please select a file to verify."); return; }
         setLoading(true);
         setError("");
@@ -171,8 +214,13 @@ function VerifyDocument() {
                 headers: { "Content-Type": "multipart/form-data" },
             });
             setResult(data);
+            setShowPaymentModal(false);
+            setPaymentStatus("idle");
         } catch (err) {
-            setError(err.response?.data?.message || "Verification failed. Please try again.");
+            // Surface error inside the modal so the user isn't stuck
+            const msg = err.response?.data?.message || "Verification failed. Please try again.";
+            setModalError(msg);
+            setPaymentStatus("failed");
         } finally {
             setLoading(false);
             setPaymentLoading(false);
@@ -187,11 +235,18 @@ function VerifyDocument() {
         try {
             const { data } = await api.get(`/verify/${verificationId.trim()}`);
             setResult(data);
+            setShowPaymentModal(false);
+            setPaymentStatus("idle");
         } catch (err) {
             if (err.response?.status === 404) {
                 setResult({ found: false, message: "No document found with this verification ID." });
+                setShowPaymentModal(false);
+                setPaymentStatus("idle");
             } else {
-                setError(err.response?.data?.message || "Lookup failed. Please try again.");
+                // Surface error inside the modal so the user isn't stuck
+                const msg = err.response?.data?.message || "Lookup failed. Please try again.";
+                setModalError(msg);
+                setPaymentStatus("failed");
             }
         } finally {
             setLoading(false);
@@ -416,6 +471,15 @@ function VerifyDocument() {
             {showPaymentModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
                     <div className="card-elevated w-full max-w-md p-8 relative overflow-hidden shadow-2xl border-slate-700/50">
+                        {/* Close Button — always visible */}
+                        <button
+                            onClick={closePaymentModal}
+                            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full text-slate-500 hover:text-white hover:bg-slate-700 transition-colors"
+                            aria-label="Close"
+                        >
+                            ✕
+                        </button>
+
                         {/* TitleGuard Logo/Icon */}
                         <div className="flex justify-center mb-6">
                             <div className="w-16 h-16 rounded-full bg-blue-600/10 border border-blue-500/20 flex items-center justify-center">
@@ -451,7 +515,7 @@ function VerifyDocument() {
                                 <div className="flex gap-3">
                                     <button
                                         type="button"
-                                        onClick={() => { setShowPaymentModal(false); setPaymentStatus("idle"); }}
+                                        onClick={closePaymentModal}
                                         className="btn-outline flex-1 py-3"
                                     >
                                         Cancel
@@ -504,19 +568,23 @@ function VerifyDocument() {
                                     <span className="text-4xl text-red-500">❌</span>
                                 </div>
                                 <div>
-                                    <h3 className="text-xl font-bold text-white">Payment Failed</h3>
+                                    <h3 className="text-xl font-bold text-white">
+                                        {modalError ? "Verification Failed" : "Payment Failed"}
+                                    </h3>
                                     <p className="text-slate-400 text-sm mt-1">
-                                        The transaction could not be completed. Please try again.
+                                        {modalError || "The transaction could not be completed. Please try again."}
                                     </p>
                                 </div>
+                                {!modalError && (
+                                    <button
+                                        onClick={() => { setPaymentStatus("idle"); setModalError(""); }}
+                                        className="btn-primary w-full py-3"
+                                    >
+                                        Try Again
+                                    </button>
+                                )}
                                 <button
-                                    onClick={() => setPaymentStatus("idle")}
-                                    className="btn-primary w-full py-3"
-                                >
-                                    Try Again
-                                </button>
-                                <button
-                                    onClick={() => setShowPaymentModal(false)}
+                                    onClick={closePaymentModal}
                                     className="text-slate-500 hover:text-white text-xs uppercase font-bold"
                                 >
                                     Dismiss
