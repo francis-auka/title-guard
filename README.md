@@ -9,6 +9,9 @@ Title Guard is a full-stack SaaS application built specifically for the Kenyan p
 ## 🚀 Key Features
 
 - **On-Chain Registration**: Generate a unique cryptographic fingerprint (SHA-256 hash) of your title deed and store it permanently on the Polygon Amoy Testnet.
+- **Automated Data Extraction**: Securely auto-extracts metadata (Owner Name, Parcel Number, Area, County) directly from PDF documents, preventing manual entry fraud.
+- **Land Registry Cross-Referencing**: Dynamically authenticates document data against a simulated Kenyan Land Registry to detect ownership and acreage discrepancies in real-time.
+- **M-Pesa STK Push Integration**: Native support for Safaricom M-Pesa mobile payments for processing document registration and verification fees securely locally.
 - **Tamper Detection**: Instantly detect if a document has been modified, even by a single pixel or character.
 - **Verification IDs**: Every registered document receives a unique UUID for quick lookup without needing to re-upload the file.
 - **Duplicate Prevention**: Built-in logic to prevent multiple registrations of the same land parcel number or the same document content.
