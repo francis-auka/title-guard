@@ -100,6 +100,7 @@ Seamless STK Push integration for processing verification fees.
 | **Faith Mbeneka** | UI/UX Designer | Experience design, wireframes, visual design system |
 | **Harriet Wambura**| M-Pesa Integration | M-Pesa Daraja API, STK Push implementation |
 | **Alicia Mbatha** | M-Pesa Integration | Payment callbacks, transaction verification logic |
+| **Reney Mogeni** | Business Analyst — Market research, problem validation, pitch content|
 
 ---
 
