@@ -6,17 +6,68 @@ Title Guard is a full-stack SaaS application built specifically for the Kenyan p
 
 ---
 
+## 🔴 The Problem
+Land fraud is one of Kenya's most destructive financial crimes. Every year, thousands of Kenyans lose their life savings, homes, and inherited land to fraudulent title deeds — forged documents that are nearly impossible to detect with the naked eye.
+
+The consequences are devastating:
+- **Families lose their most valuable financial asset**
+- **Buyers pay millions of shillings for land they will never legally own**
+- **Court battles drag on for years** with no guarantee of recovery
+- **Tampering is easy** in largely paper-based registry systems
+
+There is currently no fast, accessible, or trustworthy way for an ordinary Kenyan to verify whether a title deed is authentic before completing a land transaction.
+
+---
+
+## ✅ The Solution
+TitleGuard is a blockchain-powered verification platform that creates a **tamper-proof digital fingerprint** of title deeds on the Polygon blockchain.
+
+- **Immutable Registration**: Document hashes are stored on-chain, making them impossible to alter.
+- **Instant Verification**: Anyone can upload a deed to check it against the original record.
+- **M-Pesa Integration**: Low-cost verification paid via STK Push, making it accessible to everyone.
+- **Fraud Alerts**: Immediate detection of even the slightest modification (Match = Authentic, Mismatch = Fraud).
+
+---
+
+## 🌐 Live Demo & Testing
+
+**🚀 Live Demo**: [https://title-guard.vercel.app/](https://title-guard.vercel.app/)
+
+### 🔑 Test Account
+Use the following credentials to explore the dashboard and verification flows:
+- **Email**: `francisauka5@gmail.com`
+- **Password**: `123456`
+
+---
+
+## 📸 Screenshots
+
+### 1. User Dashboard
+Shows all registered documents with their on-chain verification status.
+![Dashboard](./screenshots/dashboard.png)
+
+### 2. Document Verification
+The interface where users upload files to detect tampering.
+![Verification](./screenshots/verification.png)
+
+### 3. Land Registry Simulation
+TitleGuard cross-references data with this simulated official land registry.
+![Registry](./screenshots/registry.png)
+
+### 4. M-Pesa Payment Flow
+Seamless STK Push integration for processing verification fees.
+![M-Pesa](./screenshots/mpesa.png)
+
+---
+
 ## 🚀 Key Features
 
-- **On-Chain Registration**: Generate a unique cryptographic fingerprint (SHA-256 hash) of your title deed and store it permanently on the Polygon Amoy Testnet.
-- **Automated Data Extraction**: Securely auto-extracts metadata (Owner Name, Parcel Number, Area, County) directly from PDF documents, preventing manual entry fraud.
-- **Land Registry Cross-Referencing**: Dynamically authenticates document data against a simulated Kenyan Land Registry to detect ownership and acreage discrepancies in real-time.
-- **M-Pesa STK Push Integration**: Native support for Safaricom M-Pesa mobile payments for processing document registration and verification fees securely locally.
-- **Tamper Detection**: Instantly detect if a document has been modified, even by a single pixel or character.
-- **Verification IDs**: Every registered document receives a unique UUID for quick lookup without needing to re-upload the file.
-- **Duplicate Prevention**: Built-in logic to prevent multiple registrations of the same land parcel number or the same document content.
-- **Kenyan Market Context**: Tailored for Kenyan parcel number formats and property document types (PDFs, Images, DOCX).
-- **Secure by Design**: Documents are hashed in memory; the actual file content is never stored on the server, ensuring total privacy.
+- **On-Chain Registration**: Store SHA-256 hashes permanently on Polygon Amoy Testnet.
+- **Automated Data Extraction**: Extracts metadata (Owner, Parcel No, Area) directly from PDFs.
+- **Registry Cross-Referencing**: Authenticates data against the Land Registry in real-time.
+- **M-Pesa STK Push**: Native support for Safaricom M-Pesa mobile payments.
+- **Tamper Detection**: Detects modifications down to a single pixel.
+- **Secure by Design**: Documents are hashed in memory; file content is **never** stored on our servers.
 
 ---
 
@@ -25,43 +76,34 @@ Title Guard is a full-stack SaaS application built specifically for the Kenyan p
 ### Backend
 - **Node.js & Express**: Scalable REST API.
 - **MongoDB & Mongoose**: Secure user and document metadata storage.
-- **JWT (JSON Web Tokens)**: Secure stateless authentication.
-- **Multer**: High-performance middleware for handling file uploads (memory storage).
-- **SHA-256 Hashing**: Standardized cryptographic document fingerprinting.
+- **JWT**: Secure stateless authentication.
+- **SHA-256 Hashing**: Standardized cryptographic fingerprinting.
 
 ### Frontend
 - **React 18 & Vite**: Modern, high-performance user interface.
 - **Tailwind CSS 3.4**: Premium, responsive dark-themed styling.
-- **React Router DOM**: Seamless client-side navigation.
 - **Axios**: Promised-based HTTP client with JWT interceptors.
 
 ### Blockchain
 - **Solidity**: Smart contract for document registry logic.
-- **Hardhat**: Professional Ethereum development environment.
 - **Polygon Amoy Testnet**: Low-cost, high-speed L2 blockchain.
 - **Ethers.js**: Interaction with smart contracts from the backend.
 
 ---
 
-## 📂 Project Structure
+## 👥 TitleGuard Team
 
-```text
-TitleGuard/
-├── backend/        # Express API & MongoDB Models
-├── frontend/       # React App & Tailwind Styling
-├── blockchain/     # Solidity Smart Contracts & Hardhat Config
-└── README.md       # Project Documentation
-```
+| Name | Role | Responsibilities |
+| :--- | :--- | :--- |
+| **Francis Auka** | Backend Developer | Server architecture, blockchain integration, API development |
+| **Kelly Melchris** | Frontend Developer | React UI development, dashboard, document upload flows |
+| **Faith Mbeneka** | UI/UX Designer | Experience design, wireframes, visual design system |
+| **Harriet Wambura**| M-Pesa Integration | M-Pesa Daraja API, STK Push implementation |
+| **Alicia Mbatha** | M-Pesa Integration | Payment callbacks, transaction verification logic |
 
 ---
 
 ## ⚙️ Installation & Setup
-
-### Prerequisites
-- [Node.js](https://nodejs.org/) (v18+)
-- [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) account
-- [Alchemy](https://www.alchemy.com/) account (for Polygon RPC)
-- [MetaMask](https://metamask.io/) or another wallet with Amoy Testnet MATIC
 
 ### 1. Clone the Repository
 ```bash
@@ -85,19 +127,10 @@ npm install
 npm run dev
 ```
 
-### 4. Blockchain Deployment (Optional)
-```bash
-cd blockchain
-npm install
-cp .env.example .env
-# Add ALCHEMY_RPC_URL and PRIVATE_KEY to .env
-npx hardhat run scripts/deploy.js --network amoy
-```
-
 ---
 
 ## 🔒 Security Policy
 
-Title Guard uses a **Zero-Storage Policy** for sensitive documents. When a user uploads a document for registration or verification, the file is processed entirely in the application's RAM. Only the resulting SHA-256 hash is compared or stored. Your property data remains your property.
+Title Guard uses a **Zero-Storage Policy**. When a user uploads a document, it is processed entirely in RAM. Only the resulting SHA-256 hash is compared or stored. Your property data remains your property.
 
 
