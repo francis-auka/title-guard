@@ -54,27 +54,29 @@ app.use((err, req, res, next) => {
     });
 });
 
-// ─── Database Connection & Server Start ───────────────────────────────────────
+// ─── Server Start (always start first, then connect DB) ───────────────────────
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
 
-if (!MONGO_URI) {
-    console.error("❌ MONGO_URI is not defined in .env");
-    process.exit(1);
-}
+// Start server immediately so Render detects the open port
+app.listen(PORT, () => {
+    console.log(`🚀 TitleGuard API running on port ${PORT}`);
+    console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+});
 
-mongoose
-    .connect(MONGO_URI)
-    .then(() => {
-        console.log("✅ MongoDB connected");
-        app.listen(PORT, () => {
-            console.log(`🚀 TitleGuard API running on http://localhost:${PORT}`);
-            console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+// ─── Database Connection ───────────────────────────────────────────────────────
+if (!MONGO_URI) {
+    console.error("❌ MONGO_URI is not defined — database features will be unavailable");
+} else {
+    mongoose
+        .connect(MONGO_URI)
+        .then(() => {
+            console.log("✅ MongoDB connected");
+        })
+        .catch((err) => {
+            console.error("❌ MongoDB connection error:", err.message);
+            // Don't exit — server stays up, DB-dependent routes will return errors
         });
-    })
-    .catch((err) => {
-        console.error("❌ MongoDB connection error:", err.message);
-        process.exit(1);
-    });
+}
 
 module.exports = app;
