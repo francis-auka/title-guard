@@ -26,10 +26,26 @@ app.use(express.urlencoded({ extended: true }));
 app.get("/api/health", (req, res) => {
     res.json({
         status: "ok",
+        database: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
         service: "TitleGuard API",
         version: "1.0.0",
         timestamp: new Date().toISOString(),
     });
+});
+
+// ─── Database Status Middleware ────────────────────────────────────────────────
+// Prevents requests from hanging if DB is not connected
+app.use("/api", (req, res, next) => {
+    // Skip health check
+    if (req.path === "/health") return next();
+
+    if (mongoose.connection.readyState !== 1) {
+        return res.status(503).json({
+            success: false,
+            message: "Database is not connected. Please check server logs.",
+        });
+    }
+    next();
 });
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
