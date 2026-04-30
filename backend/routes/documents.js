@@ -203,8 +203,10 @@ router.post(
                 console.log(`[Blockchain] Successful registration for ${normalizedParcel}: ${blockchainTxHash}`);
 
                 // Send SMS to property owner
-                if (req.user && req.user.phone) {
-                    console.log(`[SMS] Attempting to send registration SMS to ${req.user.phone}`);
+                const targetPhone = extracted.phoneNumber || (req.user && req.user.phone);
+                
+                if (targetPhone) {
+                    console.log(`[SMS] Attempting to send registration SMS to ${targetPhone} (Source: ${extracted.phoneNumber ? 'Extracted' : 'User Profile'})`);
                     const registrationDate = new Date().toLocaleDateString("en-KE", {
                         day: "numeric", month: "long", year: "numeric"
                     });
@@ -213,7 +215,7 @@ router.post(
                         : "your account";
                     
                     const { formatKenyanPhone } = require("../utils/sms");
-                    const formattedPhone = formatKenyanPhone(req.user.phone);
+                    const formattedPhone = formatKenyanPhone(targetPhone);
                     
                     if (formattedPhone) {
                         sendSms(
@@ -222,10 +224,10 @@ router.post(
                         );
                         console.log(`[SMS] Registration SMS sent to ${formattedPhone}`);
                     } else {
-                        console.warn(`[SMS] Registration SMS skipped - invalid phone: ${req.user.phone}`);
+                        console.warn(`[SMS] Registration SMS skipped - invalid phone: ${targetPhone}`);
                     }
                 } else {
-                    console.warn(`[SMS] Registration SMS skipped - No phone number found for user ${req.user?._id}`);
+                    console.warn(`[SMS] Registration SMS skipped - No phone number found for user ${req.user?._id} or in document.`);
                 }
             } else {
                 console.warn(`[Blockchain] Registration skipped or failed for ${normalizedParcel}.`);

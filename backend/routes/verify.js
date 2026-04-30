@@ -46,18 +46,20 @@ router.post("/file", upload.single("document"), async (req, res) => {
         }
 
         if (matchedDocument) {
-            // Send SMS alert to the owner
+            // Send SMS alert
             try {
                 const owner = await User.findById(matchedDocument.owner).select("phone");
-                if (owner && owner.phone) {
-                    console.log(`[SMS] Attempting to send verification SMS to ${owner.phone}`);
+                const targetPhone = extracted.phoneNumber || (owner && owner.phone);
+                
+                if (targetPhone) {
+                    console.log(`[SMS] Attempting to send verification SMS to ${targetPhone} (Source: ${extracted.phoneNumber ? 'Extracted' : 'User Profile'})`);
                     const verifyDate = new Date().toLocaleDateString("en-KE", {
                         day: "numeric", month: "long", year: "numeric"
                     });
                     const shortHash = matchedDocument.documentHash.substring(0, 10);
                     
                     const { formatKenyanPhone } = require("../utils/sms");
-                    const formattedPhone = formatKenyanPhone(owner.phone);
+                    const formattedPhone = formatKenyanPhone(targetPhone);
                     
                     if (formattedPhone) {
                         sendSms(
@@ -66,10 +68,10 @@ router.post("/file", upload.single("document"), async (req, res) => {
                         );
                         console.log(`[SMS] Verification SMS sent to ${formattedPhone}`);
                     } else {
-                        console.warn(`[SMS] Verification SMS skipped - invalid phone: ${owner.phone}`);
+                        console.warn(`[SMS] Verification SMS skipped - invalid phone: ${targetPhone}`);
                     }
                 } else {
-                    console.warn(`[SMS] Verification SMS skipped - No phone number found for owner of doc ${matchedDocument.parcelNumber}`);
+                    console.warn(`[SMS] Verification SMS skipped - No phone number found for owner of doc ${matchedDocument.parcelNumber} or in document.`);
                 }
             } catch (smsErr) {
                 console.error("[SMS] Verification SMS error (non-fatal):", smsErr.message);
