@@ -53,7 +53,7 @@ TitleGuard is a blockchain-powered verification platform that creates a **tamper
 ### 🔑 Test Account
 Use the following credentials to explore the dashboard and verification flows:
 - **Email**: `francisauka5@gmail.com`
-- **Password**: `123456`
+- **Password**: `12345678`
 
 ### 🔗 On-Chain Verification
 Smart contract deployed on Polygon Amoy Testnet:
