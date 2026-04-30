@@ -134,7 +134,8 @@ const checkPaymentStatus = async (req, res) => {
         try {
             const statusResponse = await querySTKStatus(checkoutRequestID);
 
-            if (statusResponse.ResultCode === '0') {
+            // Safaricom ResultCode 0 means SUCCESS
+            if (statusResponse.ResultCode == 0) {
                 payment.status = 'completed';
                 await payment.save();
                 return res.json({
@@ -142,7 +143,8 @@ const checkPaymentStatus = async (req, res) => {
                     amount: payment.amount,
                     purpose: payment.purpose,
                 });
-            } else if (statusResponse.ResultCode) {
+            } else if (statusResponse.ResultCode !== undefined && statusResponse.ResultCode != null) {
+                // If we have a ResultCode and it's NOT 0, it means the payment failed or was cancelled
                 payment.status = 'failed';
                 await payment.save();
                 return res.json({ status: 'failed' });
