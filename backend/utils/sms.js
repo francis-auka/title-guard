@@ -76,6 +76,7 @@ async function sendSms(to, message) {
         }
 
         const response = await client.send({
+            from: "AFTKNG",
             to: [formattedPhone],
             message,
             enqueue: true,
