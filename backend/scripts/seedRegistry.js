@@ -243,18 +243,61 @@ const landRegistryData = [
         status: "active",
         registeredOnTitleGuard: false,
     },
+    {
+        parcelNumber: "LOC/4521/089",
+        ownerName: "FRANCIS AUKA",
+        nationalId: "41293856",
+        phoneNumber: "+254795544180",
+        county: "Nairobi City County",
+        area: "0.060",
+        titleNumber: "NRB/EAST/2201/IR",
+        verificationId: "TG-2021-LOC-4521-089",
+        dateIssued: "10/05/2021",
+        landUse: "Residential",
+        tenure: "Freehold",
+        status: "active",
+        registeredOnTitleGuard: false,
+    },
+    {
+        parcelNumber: "LOC/3302/117",
+        ownerName: "BRIAN OTIENO",
+        nationalId: "31876542",
+        phoneNumber: "+254715322600",
+        county: "Nairobi City County",
+        area: "0.080",
+        titleNumber: "NRB/NORTH/3302/IR",
+        verificationId: "TG-2021-LOC-3302-117",
+        dateIssued: "22/11/2021",
+        landUse: "Residential",
+        tenure: "Freehold",
+        status: "active",
+        registeredOnTitleGuard: false,
+    },
 ];
 
 const seed = async () => {
     try {
         await mongoose.connect(process.env.MONGO_URI);
         console.log('Connected to MongoDB');
-        await LandRegistry.deleteMany({});
-        const inserted = await LandRegistry.insertMany(landRegistryData);
-        console.log(`Seeded ${inserted.length} land registry records`);
-        process.exit(0);
+
+        let seededCount = 0;
+        let skippedCount = 0;
+
+        for (const data of landRegistryData) {
+            const exists = await LandRegistry.findOne({ parcelNumber: data.parcelNumber });
+            if (!exists) {
+                await LandRegistry.create(data);
+                seededCount++;
+            } else {
+                skippedCount++;
+            }
+        }
+
+        console.log(`Seeding complete: ${seededCount} new records added, ${skippedCount} skipped (duplicates).`);
+        mongoose.disconnect();
     } catch (error) {
         console.error('Seed error:', error.message);
+        mongoose.disconnect();
         process.exit(1);
     }
 };
