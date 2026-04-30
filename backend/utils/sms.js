@@ -17,8 +17,8 @@ let smsClient = null;
 function getSmsClient() {
     if (smsClient) return smsClient;
 
-    const apiKey = process.env.SMS_KEY;
-    const username = process.env.SMS_USERNAME;
+    const apiKey = process.env.SMS_KEY ? process.env.SMS_KEY.trim() : null;
+    const username = process.env.SMS_USERNAME ? process.env.SMS_USERNAME.trim() : null;
 
     if (!apiKey || !username) {
         console.warn("[SMS] SMS_KEY or SMS_USERNAME not set — SMS sending disabled.");
