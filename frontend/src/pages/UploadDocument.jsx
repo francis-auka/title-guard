@@ -185,46 +185,12 @@ function UploadDocument() {
             });
 
             setCheckoutRequestID(data.checkoutRequestID);
-            setPaymentStatus("pending");
-
-            // Start polling
-            startPolling(data.checkoutRequestID);
+            setPaymentStatus("sent");
+            setPaymentLoading(false);
         } catch (err) {
             setError(err.response?.data?.message || "Failed to initiate payment.");
             setPaymentLoading(false);
         }
-    };
-
-    const startPolling = (requestID) => {
-        let attempts = 0;
-        const interval = setInterval(async () => {
-            attempts++;
-
-            // Stop polling after 6 attempts (30 seconds at 5s intervals)
-            if (attempts > 6) {
-                clearInterval(interval);
-                setPaymentStatus("processing");
-                setPaymentLoading(false);
-                return;
-            }
-
-            try {
-                const { data } = await api.get(`/mpesa/status/${requestID}`);
-
-                if (data.status === "completed") {
-                    clearInterval(interval);
-                    setPaymentStatus("completed");
-                    // Automatically proceed to document registration
-                    registerDocument();
-                } else if (data.status === "failed") {
-                    clearInterval(interval);
-                    setPaymentStatus("failed");
-                    setPaymentLoading(false);
-                }
-            } catch (err) {
-                console.error("Polling error:", err);
-            }
-        }, 5000);
     };
 
     const registerDocument = async () => {
@@ -513,21 +479,30 @@ function UploadDocument() {
                             </form>
                         )}
 
-                        {paymentStatus === "pending" && (
-                            <div className="text-center py-10 space-y-6">
-                                <div className="relative mx-auto w-20 h-20">
-                                    <div className="absolute inset-0 border-4 border-blue-500/20 rounded-full" />
-                                    <div className="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                                    <span className="absolute inset-0 flex items-center justify-center text-2xl">📱</span>
+                        {paymentStatus === "sent" && (
+                            <div className="text-center py-10 space-y-6 animate-in fade-in duration-300">
+                                <div className="w-20 h-20 bg-blue-500/20 border border-blue-500/40 rounded-full flex items-center justify-center mx-auto">
+                                    <span className="text-3xl">📱</span>
                                 </div>
                                 <div>
-                                    <p className="text-white font-bold mb-1">Check your phone</p>
-                                    <p className="text-slate-400 text-sm leading-relaxed px-4">
-                                        Enter your M-Pesa PIN on <strong>{phone}</strong> to confirm the payment of <strong>KES 5</strong>.
+                                    <h3 className="text-xl font-bold text-white">M-Pesa Prompt Sent</h3>
+                                    <p className="text-slate-400 text-sm mt-1 px-4 leading-relaxed">
+                                        Please check your phone (<strong>{phone}</strong>) and enter your M-Pesa PIN to complete the payment.
                                     </p>
                                 </div>
-                                <div className="px-4 py-2 rounded bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-500 inline-block uppercase font-bold tracking-tighter">
-                                    Waiting for confirmation...
+                                <div className="space-y-3">
+                                    <button
+                                        onClick={registerDocument}
+                                        className="btn-primary w-full py-3"
+                                    >
+                                        I've Paid, Register Now
+                                    </button>
+                                    <button
+                                        onClick={closePaymentModal}
+                                        className="text-slate-500 hover:text-white text-xs uppercase font-bold w-full"
+                                    >
+                                        I'll pay later
+                                    </button>
                                 </div>
                             </div>
                         )}
@@ -541,26 +516,6 @@ function UploadDocument() {
                                 </div>
                                 <h3 className="text-xl font-bold text-white">Payment Confirmed!</h3>
                                 <p className="text-slate-400 text-sm">Proceeding with document registration...</p>
-                            </div>
-                        )}
-
-                        {paymentStatus === "processing" && (
-                            <div className="text-center py-10 space-y-6 animate-in fade-in duration-300">
-                                <div className="w-20 h-20 bg-amber-500/20 border border-amber-500/40 rounded-full flex items-center justify-center mx-auto">
-                                    <span className="text-3xl">⏳</span>
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-white">Payment Pending</h3>
-                                    <p className="text-slate-400 text-sm mt-1 px-4 leading-relaxed">
-                                        We are still waiting for confirmation from M-Pesa. You will receive an SMS once the payment is processed.
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={closePaymentModal}
-                                    className="btn-primary w-full py-3"
-                                >
-                                    Done
-                                </button>
                             </div>
                         )}
 
