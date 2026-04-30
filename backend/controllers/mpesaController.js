@@ -1,5 +1,6 @@
 const Payment = require('../models/Payment');
 const { initiateSTKPush, querySTKStatus } = require('../utils/mpesa');
+const { sendSms } = require('../utils/sms');
 
 // Initiate STK Push payment
 const initiatePayment = async (req, res) => {
@@ -183,12 +184,23 @@ const mpesaCallback = async (req, res) => {
             // Payment successful — extract receipt number
             const items = CallbackMetadata?.Item || [];
             const receiptItem = items.find(item => item.Name === 'MpesaReceiptNumber');
+            const amountItem = items.find(item => item.Name === 'Amount');
 
             payment.status = 'completed';
             payment.mpesaReceiptNumber = receiptItem?.Value || '';
             await payment.save();
 
             console.log('Payment completed:', payment.mpesaReceiptNumber);
+
+            // Send SMS confirmation to payer (non-blocking)
+            if (payment.phone) {
+                const receiptNum = receiptItem?.Value || 'N/A';
+                const paidAmount = amountItem?.Value || payment.amount;
+                sendSms(
+                    payment.phone,
+                    `TitleGuard: Payment of KES ${paidAmount} received. M-Pesa ref: ${receiptNum}. Your deed verification is now processing. Thank you. - TitleGuard`
+                );
+            }
         } else {
             payment.status = 'failed';
             await payment.save();

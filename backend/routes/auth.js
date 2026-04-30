@@ -18,7 +18,7 @@ const generateToken = (userId) => {
 // ─────────────────────────────────────────────────────────────────────────────
 router.post("/register", async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { name, email, password, nationalId, phone } = req.body;
 
         // Basic validation
         if (!name || !email || !password) {
@@ -45,7 +45,11 @@ router.post("/register", async (req, res) => {
         }
 
         // Create user (password is hashed via pre-save hook)
-        const user = await User.create({ name, email, password });
+        const userData = { name, email, password };
+        if (nationalId) userData.nationalId = nationalId.trim();
+        if (phone) userData.phone = phone.trim();
+
+        const user = await User.create(userData);
 
         const token = generateToken(user._id);
 
@@ -58,6 +62,8 @@ router.post("/register", async (req, res) => {
                 name: user.name,
                 email: user.email,
                 role: user.role,
+                nationalId: user.nationalId || null,
+                phone: user.phone || null,
                 createdAt: user.createdAt,
             },
         });
@@ -117,6 +123,8 @@ router.post("/login", async (req, res) => {
                 name: user.name,
                 email: user.email,
                 role: user.role,
+                nationalId: user.nationalId || null,
+                phone: user.phone || null,
                 createdAt: user.createdAt,
             },
         });
@@ -139,9 +147,54 @@ router.get("/me", protect, async (req, res) => {
             name: req.user.name,
             email: req.user.email,
             role: req.user.role,
+            nationalId: req.user.nationalId || null,
+            phone: req.user.phone || null,
             createdAt: req.user.createdAt,
         },
     });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PUT /api/auth/profile  (protected — update nationalId and/or phone)
+// ─────────────────────────────────────────────────────────────────────────────
+router.put("/profile", protect, async (req, res) => {
+    try {
+        const { nationalId, phone } = req.body;
+
+        const updates = {};
+        if (nationalId !== undefined) updates.nationalId = nationalId ? nationalId.trim() : "";
+        if (phone !== undefined) updates.phone = phone ? phone.trim() : "";
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "No fields provided for update.",
+            });
+        }
+
+        const user = await User.findByIdAndUpdate(
+            req.user._id,
+            { $set: updates },
+            { new: true, runValidators: true }
+        );
+
+        res.json({
+            success: true,
+            message: "Profile updated successfully.",
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                nationalId: user.nationalId || null,
+                phone: user.phone || null,
+                createdAt: user.createdAt,
+            },
+        });
+    } catch (err) {
+        console.error("[Auth/Profile]", err.message);
+        res.status(500).json({ success: false, message: "Profile update failed. Please try again." });
+    }
 });
 
 module.exports = router;

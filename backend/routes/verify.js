@@ -2,7 +2,9 @@ const express = require("express");
 const crypto = require("crypto");
 const multer = require("multer");
 const Document = require("../models/Document");
+const User = require("../models/User");
 const extractPdfData = require("../utils/extractPdfData");
+const { sendSms } = require("../utils/sms");
 
 const router = express.Router();
 
@@ -44,6 +46,23 @@ router.post("/file", upload.single("document"), async (req, res) => {
         }
 
         if (matchedDocument) {
+            // Send SMS alert to the owner (non-blocking)
+            try {
+                const owner = await User.findById(matchedDocument.owner).select("phone");
+                if (owner && owner.phone) {
+                    const verifyDate = new Date().toLocaleDateString("en-KE", {
+                        day: "numeric", month: "long", year: "numeric"
+                    });
+                    const shortHash = matchedDocument.documentHash.substring(0, 10);
+                    sendSms(
+                        owner.phone,
+                        `TitleGuard ALERT: Your title deed (hash: ${shortHash}...) was just verified on ${verifyDate}. If you did NOT authorize this verification, contact Ardhi House immediately. - TitleGuard`
+                    );
+                }
+            } catch (smsErr) {
+                console.error("[SMS] Verification SMS lookup error (non-fatal):", smsErr.message);
+            }
+
             return res.json({
                 success: true,
                 authentic: true,

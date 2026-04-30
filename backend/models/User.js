@@ -29,6 +29,16 @@ const userSchema = new mongoose.Schema(
             enum: ["user", "admin"],
             default: "user",
         },
+        nationalId: {
+            type: String,
+            trim: true,
+            default: undefined,
+        },
+        phone: {
+            type: String,
+            trim: true,
+            default: undefined,
+        },
     },
     {
         timestamps: true,

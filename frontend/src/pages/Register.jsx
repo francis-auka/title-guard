@@ -7,7 +7,14 @@ function Register() {
     const { login } = useAuth();
     const navigate = useNavigate();
 
-    const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "" });
+    const [form, setForm] = useState({
+        name: "",
+        email: "",
+        password: "",
+        confirm: "",
+        nationalId: "",
+        phone: "",
+    });
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
@@ -21,7 +28,7 @@ function Register() {
         setError("");
 
         if (!form.name || !form.email || !form.password) {
-            setError("All fields are required.");
+            setError("Name, email, and password are required.");
             return;
         }
         if (form.password.length < 6) {
@@ -35,11 +42,15 @@ function Register() {
 
         setLoading(true);
         try {
-            const { data } = await api.post("/auth/register", {
+            const payload = {
                 name: form.name,
                 email: form.email,
                 password: form.password,
-            });
+            };
+            if (form.nationalId.trim()) payload.nationalId = form.nationalId.trim();
+            if (form.phone.trim()) payload.phone = form.phone.trim();
+
+            const { data } = await api.post("/auth/register", payload);
 
             if (data.success) {
                 login(data.token, data.user);
@@ -78,6 +89,7 @@ function Register() {
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-5">
+                        {/* Full name */}
                         <div className="form-group">
                             <label htmlFor="name" className="label">Full name</label>
                             <input
@@ -93,6 +105,7 @@ function Register() {
                             />
                         </div>
 
+                        {/* Email */}
                         <div className="form-group">
                             <label htmlFor="email" className="label">Email address</label>
                             <input
@@ -108,6 +121,52 @@ function Register() {
                             />
                         </div>
 
+                        {/* National ID + Phone — side by side on wider screens */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="form-group">
+                                <label htmlFor="nationalId" className="label">
+                                    National ID
+                                    <span className="ml-1 text-slate-500 font-normal text-xs">(optional)</span>
+                                </label>
+                                <input
+                                    id="nationalId"
+                                    name="nationalId"
+                                    type="text"
+                                    autoComplete="off"
+                                    value={form.nationalId}
+                                    onChange={handleChange}
+                                    placeholder="e.g. 12345678"
+                                    className="input"
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="phone" className="label">
+                                    Phone number
+                                    <span className="ml-1 text-slate-500 font-normal text-xs">(optional)</span>
+                                </label>
+                                <input
+                                    id="phone"
+                                    name="phone"
+                                    type="tel"
+                                    autoComplete="tel"
+                                    value={form.phone}
+                                    onChange={handleChange}
+                                    placeholder="0712 345 678"
+                                    className="input"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Phone helper note */}
+                        <p className="text-[11px] text-slate-500 -mt-2 flex items-center gap-1.5">
+                            <svg className="w-3 h-3 shrink-0 text-accent-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Your phone number is used to send SMS alerts after deed registration and verification.
+                        </p>
+
+                        {/* Password */}
                         <div className="form-group">
                             <label htmlFor="password" className="label">Password</label>
                             <input
@@ -123,6 +182,7 @@ function Register() {
                             />
                         </div>
 
+                        {/* Confirm password */}
                         <div className="form-group">
                             <label htmlFor="confirm" className="label">Confirm password</label>
                             <input

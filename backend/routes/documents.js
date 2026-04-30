@@ -5,6 +5,7 @@ const { v4: uuidv4 } = require("uuid");
 const { protect } = require("../middleware/auth");
 const Document = require("../models/Document");
 const extractPdfData = require("../utils/extractPdfData");
+const { sendSms } = require("../utils/sms");
 
 const router = express.Router();
 
@@ -200,6 +201,20 @@ router.post(
                 doc.status = "verified"; // Update status on success
                 await doc.save();
                 console.log(`[Blockchain] Successful registration for ${normalizedParcel}: ${blockchainTxHash}`);
+
+                // Send SMS to property owner (non-blocking — errors are caught inside sendSms)
+                if (req.user.phone) {
+                    const registrationDate = new Date().toLocaleDateString("en-KE", {
+                        day: "numeric", month: "long", year: "numeric"
+                    });
+                    const nationalIdText = req.user.nationalId
+                        ? `National ID ${req.user.nationalId}`
+                        : "your account";
+                    sendSms(
+                        req.user.phone,
+                        `TitleGuard: Your title deed for property ${normalizedParcel} has been registered on the blockchain under ${nationalIdText} on ${registrationDate}. Keep this as blockchain proof of ownership. - Ardhi House`
+                    );
+                }
             } else {
                 console.warn(`[Blockchain] Registration skipped or failed for ${normalizedParcel}.`);
             }
