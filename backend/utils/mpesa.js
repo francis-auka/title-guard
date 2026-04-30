@@ -71,7 +71,7 @@ const querySTKStatus = async (checkoutRequestID) => {
     const { password, timestamp } = generatePassword();
 
     const response = await axios.post(
-        'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/query',
+        'https://sandbox.safaricom.co.ke/mpesa/stkpushquery/v1/query',
         {
             BusinessShortCode: process.env.MPESA_SHORTCODE,
             Password: password,

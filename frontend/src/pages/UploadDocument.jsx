@@ -196,7 +196,18 @@ function UploadDocument() {
     };
 
     const startPolling = (requestID) => {
+        let attempts = 0;
         const interval = setInterval(async () => {
+            attempts++;
+
+            // Stop polling after 6 attempts (30 seconds at 5s intervals)
+            if (attempts > 6) {
+                clearInterval(interval);
+                setPaymentStatus("processing");
+                setPaymentLoading(false);
+                return;
+            }
+
             try {
                 const { data } = await api.get(`/mpesa/status/${requestID}`);
 
@@ -530,6 +541,26 @@ function UploadDocument() {
                                 </div>
                                 <h3 className="text-xl font-bold text-white">Payment Confirmed!</h3>
                                 <p className="text-slate-400 text-sm">Proceeding with document registration...</p>
+                            </div>
+                        )}
+
+                        {paymentStatus === "processing" && (
+                            <div className="text-center py-10 space-y-6 animate-in fade-in duration-300">
+                                <div className="w-20 h-20 bg-amber-500/20 border border-amber-500/40 rounded-full flex items-center justify-center mx-auto">
+                                    <span className="text-3xl">⏳</span>
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-white">Payment Pending</h3>
+                                    <p className="text-slate-400 text-sm mt-1 px-4 leading-relaxed">
+                                        We are still waiting for confirmation from M-Pesa. You will receive an SMS once the payment is processed.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={closePaymentModal}
+                                    className="btn-primary w-full py-3"
+                                >
+                                    Done
+                                </button>
                             </div>
                         )}
 
