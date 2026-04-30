@@ -202,18 +202,30 @@ router.post(
                 await doc.save();
                 console.log(`[Blockchain] Successful registration for ${normalizedParcel}: ${blockchainTxHash}`);
 
-                // Send SMS to property owner (non-blocking — errors are caught inside sendSms)
-                if (req.user.phone) {
+                // Send SMS to property owner
+                if (req.user && req.user.phone) {
+                    console.log(`[SMS] Attempting to send registration SMS to ${req.user.phone}`);
                     const registrationDate = new Date().toLocaleDateString("en-KE", {
                         day: "numeric", month: "long", year: "numeric"
                     });
                     const nationalIdText = req.user.nationalId
                         ? `National ID ${req.user.nationalId}`
                         : "your account";
-                    sendSms(
-                        req.user.phone,
-                        `TitleGuard: Your title deed for property ${normalizedParcel} has been registered on the blockchain under ${nationalIdText} on ${registrationDate}. Keep this as blockchain proof of ownership. - Ardhi House`
-                    );
+                    
+                    const { formatKenyanPhone } = require("../utils/sms");
+                    const formattedPhone = formatKenyanPhone(req.user.phone);
+                    
+                    if (formattedPhone) {
+                        sendSms(
+                            formattedPhone,
+                            `TitleGuard: Your title deed for property ${normalizedParcel} has been registered on the blockchain under ${nationalIdText} on ${registrationDate}. Keep this as blockchain proof of ownership. - Ardhi House`
+                        );
+                        console.log(`[SMS] Registration SMS sent to ${formattedPhone}`);
+                    } else {
+                        console.warn(`[SMS] Registration SMS skipped - invalid phone: ${req.user.phone}`);
+                    }
+                } else {
+                    console.warn(`[SMS] Registration SMS skipped - No phone number found for user ${req.user?._id}`);
                 }
             } else {
                 console.warn(`[Blockchain] Registration skipped or failed for ${normalizedParcel}.`);

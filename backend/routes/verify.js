@@ -46,21 +46,33 @@ router.post("/file", upload.single("document"), async (req, res) => {
         }
 
         if (matchedDocument) {
-            // Send SMS alert to the owner (non-blocking)
+            // Send SMS alert to the owner
             try {
                 const owner = await User.findById(matchedDocument.owner).select("phone");
                 if (owner && owner.phone) {
+                    console.log(`[SMS] Attempting to send verification SMS to ${owner.phone}`);
                     const verifyDate = new Date().toLocaleDateString("en-KE", {
                         day: "numeric", month: "long", year: "numeric"
                     });
                     const shortHash = matchedDocument.documentHash.substring(0, 10);
-                    sendSms(
-                        owner.phone,
-                        `TitleGuard ALERT: Your title deed (hash: ${shortHash}...) was just verified on ${verifyDate}. If you did NOT authorize this verification, contact Ardhi House immediately. - TitleGuard`
-                    );
+                    
+                    const { formatKenyanPhone } = require("../utils/sms");
+                    const formattedPhone = formatKenyanPhone(owner.phone);
+                    
+                    if (formattedPhone) {
+                        sendSms(
+                            formattedPhone,
+                            `TitleGuard ALERT: Your title deed (hash: ${shortHash}...) was just verified on ${verifyDate}. If you did NOT authorize this verification, contact Ardhi House immediately. - TitleGuard`
+                        );
+                        console.log(`[SMS] Verification SMS sent to ${formattedPhone}`);
+                    } else {
+                        console.warn(`[SMS] Verification SMS skipped - invalid phone: ${owner.phone}`);
+                    }
+                } else {
+                    console.warn(`[SMS] Verification SMS skipped - No phone number found for owner of doc ${matchedDocument.parcelNumber}`);
                 }
             } catch (smsErr) {
-                console.error("[SMS] Verification SMS lookup error (non-fatal):", smsErr.message);
+                console.error("[SMS] Verification SMS error (non-fatal):", smsErr.message);
             }
 
             return res.json({
