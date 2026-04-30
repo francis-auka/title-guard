@@ -37,8 +37,9 @@ app.get("/api/health", (req, res) => {
 app.get("/api/test-sms", async (req, res) => {
     try {
         const { sendSms } = require("./utils/sms");
+        const username = process.env.SMS_USERNAME;
         const result = await sendSms("+254795544180", "TitleGuard SMS test");
-        res.json(result);
+        res.json({ ...result, debug: { username } });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }

@@ -12,11 +12,9 @@ const AfricasTalking = require("africastalking");
 let smsClient = null;
 
 /**
- * Lazily initialise the SMS client so missing env vars don't crash on startup.
+ * Initialise the SMS client using current env variables.
  */
 function getSmsClient() {
-    if (smsClient) return smsClient;
-
     const apiKey = process.env.SMS_KEY ? process.env.SMS_KEY.trim() : null;
     const username = process.env.SMS_USERNAME ? process.env.SMS_USERNAME.trim() : null;
 
@@ -25,9 +23,9 @@ function getSmsClient() {
         return null;
     }
 
+    console.log(`[SMS] Initializing AT client with username: ${username}`);
     const at = AfricasTalking({ apiKey, username });
-    smsClient = at.SMS;
-    return smsClient;
+    return at.SMS;
 }
 
 /**
