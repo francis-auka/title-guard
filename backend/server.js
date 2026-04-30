@@ -33,6 +33,17 @@ app.get("/api/health", (req, res) => {
     });
 });
 
+// ─── SMS Debug Route (Temporary) ──────────────────────────────────────────────
+app.get("/api/test-sms", async (req, res) => {
+    try {
+        const { sendSms } = require("./utils/sms");
+        const result = await sendSms("+254795544180", "TitleGuard SMS test");
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 // ─── Database Status Middleware ────────────────────────────────────────────────
 // Prevents requests from hanging if DB is not connected
 app.use("/api", (req, res, next) => {

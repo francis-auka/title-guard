@@ -63,14 +63,19 @@ function formatKenyanPhone(phone) {
  * Send an SMS. Never throws — all errors are caught and logged.
  * @param {string} to   - Recipient phone number (any format)
  * @param {string} message - SMS body text
+ * @returns {Promise<{success: boolean, data?: any, error?: string}>}
  */
 async function sendSms(to, message) {
     try {
         const client = getSmsClient();
-        if (!client) return;
+        if (!client) {
+            return { success: false, error: "SMS client not initialized (check env vars)" };
+        }
 
         const formattedPhone = formatKenyanPhone(to);
-        if (!formattedPhone) return;
+        if (!formattedPhone) {
+            return { success: false, error: "Invalid phone number format" };
+        }
 
         const response = await client.send({
             to: [formattedPhone],
@@ -79,8 +84,11 @@ async function sendSms(to, message) {
         });
 
         console.log(`[SMS] Sent to ${formattedPhone}:`, JSON.stringify(response?.SMSMessageData?.Recipients?.[0] || response));
+        return { success: true, data: response };
     } catch (err) {
-        console.error("[SMS] Failed to send SMS (non-fatal):", err.message || err);
+        const errMsg = err.message || err;
+        console.error("[SMS] Failed to send SMS (non-fatal):", errMsg);
+        return { success: false, error: errMsg };
     }
 }
 
