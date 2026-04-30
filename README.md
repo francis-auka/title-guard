@@ -115,18 +115,6 @@ Seamless STK Push integration for processing verification fees.
 
 ---
 
-## 👥 TitleGuard Team
-
-| Name | Role | Responsibilities |
-| :--- | :--- | :--- |
-| **Francis Auka** | Backend Developer & Lead | Server architecture, blockchain integration, API development |
-| **Kelly Melchris** | Frontend Developer | React UI development, dashboard, document upload flows |
-| **Faith Mbeneka** | UI/UX Designer | Experience design, wireframes, visual design system |
-| **Harriet Wambura** | M-Pesa Integration | M-Pesa Daraja API, STK Push implementation |
-| **Alicia Mbatha** | M-Pesa Integration | Payment callbacks, transaction verification logic |
-| **Reney Mogeni** | Business Analyst — Market research, problem validation, pitch content|
-
-*Affiliated with Machakos University, School of Computing and Information Technology.*
 
 ---
 
